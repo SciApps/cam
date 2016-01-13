@@ -15,8 +15,6 @@
 #import "MCK_Image+Motis_CustomAccessors.h"
 #import "MCK_Image+CoreDataProperties.h"
 
-#define USE_CACHE 2
-
 @interface CoreAssetManager() <CoreAssetWorkerDelegate>
 
 @property (nonatomic, strong) NSMutableArray        *classList;

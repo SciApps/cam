@@ -6,6 +6,7 @@
 //  Copyright (c) 2015 Incepteam All rights reserved.
 //
 
+#import "CoreAssetManager.h"
 #import "CoreAssetWorker.h"
 #import "CoreAssetURLConnection.h"
 #import "curl.h"
