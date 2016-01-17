@@ -1,6 +1,6 @@
 //
 //  HEROCoreAssetItemImage.h
-//  cam-test
+//  CoreAssetManager
 //
 //  Created by mrnuku on 2016. 01. 17..
 //  Copyright © 2016. mrnuku. All rights reserved.
