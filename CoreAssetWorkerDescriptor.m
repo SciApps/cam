@@ -1,6 +1,6 @@
 //
 //  CoreAssetWorkerDescriptor.m
-//  FinTech
+//  CoreAssetManager
 //
 //  Created by Bálint Róbert on 14/05/15.
 //  Copyright (c) 2015 Incepteam All rights reserved.
