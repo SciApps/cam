@@ -8,6 +8,7 @@
 
 #import "CoreAssetWorkerDescriptor.h"
 #import "NSArray+Union.h"
+#import "UtilMacros.h"
 
 @interface CoreAssetWorkerDescriptor ()
 

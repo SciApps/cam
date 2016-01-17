@@ -7,6 +7,7 @@
 //
 
 #import "CoreAssetItemNormal.h"
+#import "UtilMacros.h"
 
 @implementation CoreAssetItemNormal
 

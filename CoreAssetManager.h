@@ -28,14 +28,16 @@ typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 
 @interface CoreAssetManager : Manager
 
+@property (nonatomic, copy, readonly) NSDictionary *threadDescriptors;
+
+- (void)registerThreadForClass:(Class)clss;
+
 /// killing all download worker threads
 - (void)stopAllDownloads;
 /// remving all cached file
 - (void)removeAllCaches;
 
 - (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
-
-- (void)fetchImageAssetListFromImages:(NSArray *)images startDownload:(BOOL)startDownload;
 
 /// for priorizing user stuff
 - (void)prioratizeAssetWithName:(NSString *)assetName forClass:(Class)clss priorLevel:(NSUInteger)priorLevel retryCount:(NSUInteger)retryCount startDownload:(BOOL)startDownload;

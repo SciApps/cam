@@ -9,7 +9,6 @@
 #import <CoreText/CTStringAttributes.h>
 #import <UIKit/UIKit.h>
 #import "CoreAssetItemImage.h"
-#import "NetworkingConstants.h"
 
 @implementation CoreAssetItemErrorImage
 
@@ -21,7 +20,7 @@
     NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
     paragraph.alignment = NSTextAlignmentCenter;
     
-    return @{NSForegroundColorAttributeName:[UIColor whiteColor], NSFontAttributeName:[UIFont fontWithName:fontBold size:44], NSParagraphStyleAttributeName:paragraph};
+    return @{NSForegroundColorAttributeName:[UIColor whiteColor], NSFontAttributeName:[UIFont fontWithName:@"HelveticaNeue-Bold" size:44], NSParagraphStyleAttributeName:paragraph};
 }
 
 + (id)imageWithCustomErrorString:(NSString *)errorString maxWidth:(CGFloat)maxWidth {
@@ -70,12 +69,12 @@
 - (NSURLRequest *)createURLRequest {
     NSMutableURLRequest *request = [NSMutableURLRequest new];
     
-    NSURL * baseUrl = [NSURL URLWithString:kBaseUrlStr];
+    /*NSURL * baseUrl = [NSURL URLWithString:kBaseUrlStr];
     NSURL * imageAssetEndPointUrl = [baseUrl URLByAppendingPathComponent:kImageAssetEndPointStr];
     NSURL * imageAssetUrl = [imageAssetEndPointUrl URLByAppendingPathComponent:super.assetName];
     
     [request setURL: imageAssetUrl];
-    [request setHTTPMethod:@"GET"];
+    [request setHTTPMethod:@"GET"];*/
     
     return request;
 }

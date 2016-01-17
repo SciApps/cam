@@ -11,6 +11,7 @@
 #import "CoreAssetURLConnection.h"
 #import "curl.h"
 #import "CURLConnection.h"
+#import "UtilMacros.h"
 
 @interface CURLSession : NSObject
 

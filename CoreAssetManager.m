@@ -11,14 +11,12 @@
 #import "CoreAssetWorkerDescriptor.h"
 #import "CoreAssetItemImage.h"
 #import "OKOMutableWeakArray.h"
-#import "Helper.h"
-#import "MCK_Image+Motis_CustomAccessors.h"
-#import "MCK_Image+CoreDataProperties.h"
+#import "UtilMacros.h"
 
 @interface CoreAssetManager() <CoreAssetWorkerDelegate>
 
 @property (nonatomic, strong) NSMutableArray        *classList;
-@property (nonatomic, strong) NSMutableDictionary   *threadDescriptors;
+@property (nonatomic, strong) NSMutableDictionary   *threadDescriptorsPriv;
 @property (nonatomic, assign) BOOL                  authenticationInProgress;
 @property (nonatomic, strong) NSOperationQueue      *cachedOperationQueue;
 @property (nonatomic, strong) OKOMutableWeakArray   *delegates;
@@ -42,12 +40,17 @@
     return instance;
 }*/
 
+-(NSDictionary *)threadDescriptors {
+    return _threadDescriptorsPriv.copy;
+}
+
+
 - (instancetype)init {
     self = [super init];
     
     if (self) {
         _classList = [NSMutableArray new];
-        _threadDescriptors = [NSMutableDictionary new];
+        _threadDescriptorsPriv = [NSMutableDictionary new];
         _authenticationInProgress = NO;
         _cachedOperationQueue = [NSOperationQueue new];
         _cachedOperationQueue.name = @"cachedOperationQueue";
@@ -56,10 +59,6 @@
 #ifdef USE_CACHE
         _dataCache = [NSCache new];
 #endif
-        
-        [self registerThreadForClass:[CoreAssetItemImage class]];
-        
-        [self enumerateImageAssets];
     }
     
     return self;
@@ -102,7 +101,7 @@
     _terminateDownloads = YES;
     
     for (Class clss in _classList) {
-        CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+        CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
         
         if ([worker isBusy]) {
             TestLog(@"stopAllDownloads: killing busy worker... class: '%@'", NSStringFromClass(clss));
@@ -120,7 +119,7 @@
 #endif
     
     for (Class clss in _classList) {
-        CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+        CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
         
         @synchronized (worker) {
             [worker.cachedDict enumerateKeysAndObjectsUsingBlock:^(NSString *assetName, CoreAssetItemNormal *assetItem, BOOL *stop) {
@@ -137,10 +136,11 @@
         }
     }
     
-    [self enumerateImageAssets];
+    // TOO: FIXME
+    [self enumerateImageAssetsForClass:[CoreAssetItemImage class] withSubpath:@"images"];
     
     for (Class clss in _classList) {
-        CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+        CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
         
         @synchronized (worker) {
             [worker.cachedDict enumerateKeysAndObjectsUsingBlock:^(NSString *assetName, CoreAssetItemNormal *assetItem, BOOL *stop) {
@@ -159,12 +159,13 @@
     
 #ifdef DEBUG
     // extra check
-    [self enumerateImageAssets];
+    // TOO: FIXME
+    [self enumerateImageAssetsForClass:[CoreAssetItemImage class] withSubpath:@"images"];
     
     NSUInteger faultyRemoveCount = 0;
     
     for (Class clss in _classList) {
-        CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+        CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
         
         TestLog(@"removeAllCaches: faultyRemoveCount: %li in class: '%@'", (long)worker.cachedDict.count, NSStringFromClass(clss));
         
@@ -187,7 +188,7 @@
         return nil;
     }
     
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     
     if (!worker) {
         TestLog(@"fetchAssetDataClass: class not registered '%@'", NSStringFromClass(clss));
@@ -333,12 +334,12 @@
 }
 
 - (NSDictionary *)getCacheDictForDataClass:(Class)clss {
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     return worker.cachedDict;
 }
 
 - (void)prioratizeAssetWithName:(NSString *)assetName forClass:(Class)clss priorLevel:(NSUInteger)priorLevel retryCount:(NSUInteger)retryCount startDownload:(BOOL)startDownload {
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     
     @synchronized (worker) {
         CoreAssetItemNormal *temp = [worker.cachedDict objectForKey:assetName];
@@ -387,11 +388,10 @@
 
 #pragma mark Image related
 
-- (void)enumerateImageAssets {
-    Class clss = [CoreAssetItemImage class];
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
-    NSArray *imageList = [CoreAssetManager listFilesInCacheDirectoryWithExtension:@"png" withSubpath:@"images"];
-    NSArray *imageList2 = [CoreAssetManager listFilesInCacheDirectoryWithExtension:@"jpg" withSubpath:@"images"];
+- (void)enumerateImageAssetsForClass:(Class)clss withSubpath:(NSString *)subpath {
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
+    NSArray *imageList = [CoreAssetManager listFilesInCacheDirectoryWithExtension:@"png" withSubpath:subpath];
+    NSArray *imageList2 = [CoreAssetManager listFilesInCacheDirectoryWithExtension:@"jpg" withSubpath:subpath];
     imageList = [imageList arrayByAddingObjectsFromArray:imageList2];
     
     @synchronized (worker) {
@@ -406,58 +406,13 @@
     }
 }
 
-- (void)fetchImageAssetListFromImages:(NSArray *)images startDownload:(BOOL)startDownload {
-    Class clss = [CoreAssetItemImage class];
-    
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
-    
-    @synchronized (worker) {
-        for (MCK_Image* oneElement in images) {
-            NSString *assetName = oneElement.imageUrl;
-            CoreAssetItemImage *temp = [worker.cachedDict objectForKey:assetName];
-            
-            if (!temp) {
-                // check if its already in normal download list
-                temp = [worker.normalDict objectForKey:assetName];
-                
-                // if in normal list, do nothing
-                if (temp) {
-                    continue;
-                }
-                
-                // check if its already in prior list
-                temp = [worker.priorDict objectForKey:assetName];
-                
-                // if in prior list, do nothing
-                if (temp) {
-                    continue;
-                }
-                
-                // if not, create new, add to the normal list
-                temp = [CoreAssetItemImage new];
-                temp.assetName = assetName;
-                [worker.normalDict setObject:temp forKey:assetName];
-            }
-        }
-        
-        [worker invalidateNormalList];
-    }
-    
-    if (startDownload) {
-        _terminateDownloads = NO;
-        worker.backgroundFetchMode = NO;
-        [worker resume];
-        [self performSelectorOnMainThread:@selector(resumeDownloadForClass:) withObject:clss waitUntilDone:NO];
-    }
-}
-
 #pragma mark asset class handling
 
 - (void)registerThreadForClass:(Class)clss {
     // allocate thread
     CoreAssetWorkerDescriptor *worker = [CoreAssetWorkerDescriptor descriptorWithClass:clss];
     worker.delegate = self;
-    [_threadDescriptors setObject:worker forKey:NSStringFromClass(clss)];
+    [_threadDescriptorsPriv setObject:worker forKey:NSStringFromClass(clss)];
     
     [_classList addObject:clss];
 }
@@ -466,7 +421,7 @@
     Class clss = [assetItem class];
     
     //
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     
     NSMutableArray *removeList = [[NSMutableArray alloc] initWithCapacity:2];
     
@@ -522,12 +477,12 @@
 
 - (void)addAssetToCacheDict:(CoreAssetItemNormal *)assetItem {
     Class clss = [assetItem class];
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     [worker.cachedDict setObject:assetItem forKey:assetItem.assetName];
 }
 
 - (CoreAssetItemNormal *)getNextDownloadableAssetForClass:(Class)clss {
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     
     CoreAssetItemNormal *assetItem = nil;
     
@@ -556,7 +511,7 @@
     NSUInteger busyWorkerCount = 0;
     
     for (Class clss in _classList) {
-        CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+        CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
         busyWorkerCount += [worker isBusy];
     }
     
@@ -564,7 +519,7 @@
 }
 
 - (void)resumeDownloadForClass:(Class)clss {
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     
     if (_backgroundFetchLock && !worker.isBusy) {
         dispatch_semaphore_signal(_backgroundFetchLock);
@@ -602,7 +557,7 @@
     BOOL isImageAsset = NO;
     
     Class clss = [assetItem class];
-    CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     
     if (_terminateDownloads) {
         [assetItem removeStoredFile];
@@ -679,7 +634,7 @@
         for (NSObject<CoreAssetManagerDelegate> *delegate in _delegates) {
             
             if ([delegate respondsToSelector:@selector(cachedImageDictChanged:)]) {
-                CoreAssetWorkerDescriptor *worker = [_threadDescriptors objectForKey:NSStringFromClass(clss)];
+                CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
                 [delegate performSelectorOnMainThread:@selector(cachedImageDictChanged:) withObject:worker.cachedDict waitUntilDone:NO];
             }
         }
