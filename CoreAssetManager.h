@@ -27,7 +27,10 @@ typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 
 @end
 
-@interface CoreAssetManager : Manager
+@interface CoreAssetManager : Manager {
+@private
+    NSMutableArray        *_classList;
+}
 
 @property (nonatomic, copy, readonly) NSDictionary *threadDescriptors;
 @property (nonatomic, readonly) NSArray *classList;
@@ -43,6 +46,8 @@ typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 - (void)stopAllDownloads;
 /// remving all cached file
 - (void)removeAllCaches;
+
+- (void)resumeDownloadAllClass;
 
 - (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
 

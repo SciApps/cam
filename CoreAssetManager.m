@@ -14,7 +14,6 @@
 
 @interface CoreAssetManager() <CoreAssetWorkerDelegate>
 
-@property (nonatomic, strong) NSMutableArray        *classList;
 @property (nonatomic, strong) NSMutableDictionary   *threadDescriptorsPriv;
 @property (nonatomic, assign) BOOL                  authenticationInProgress;
 @property (nonatomic, strong) NSOperationQueue      *cachedOperationQueue;
@@ -23,6 +22,8 @@
 @end
 
 @implementation CoreAssetManager
+
+@synthesize classList = _classList;
 
 /*static CoreAssetManager *instance;
 
