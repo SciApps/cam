@@ -9,6 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import "Manager.h"
+#import "OKOMutableWeakArray.h"
 
 #define kCoreAssetManagerFetchWithBlockPriorLevel 9999
 #define kCoreAssetManagerFetchWithBlockRetryCount 3
@@ -29,6 +30,12 @@ typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 @interface CoreAssetManager : Manager
 
 @property (nonatomic, copy, readonly) NSDictionary *threadDescriptors;
+@property (nonatomic, readonly) NSArray *classList;
+@property (nonatomic, assign) BOOL terminateDownloads;
+@property (nonatomic, strong) OKOMutableWeakArray   *delegates;
+#ifdef USE_CACHE
+@property (nonatomic, strong) NSCache               *dataCache;
+#endif
 
 - (void)registerThreadForClass:(Class)clss;
 
@@ -51,5 +58,7 @@ typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 + (void)disableBackupForFilePath:(NSString *)path;
 
 + (id)fetchImageWithName:(NSString *)assetName withCompletionHandler:(void (^)(UIImage *image))completionHandler;
+
++ (NSArray *)listFilesInCacheDirectoryWithExtension:(NSString *)extension withSubpath:(NSString *)subpath;
 
 @end

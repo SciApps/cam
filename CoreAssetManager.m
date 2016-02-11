@@ -10,7 +10,6 @@
 #import "CoreAssetWorker.h"
 #import "CoreAssetWorkerDescriptor.h"
 #import "CoreAssetItemImage.h"
-#import "OKOMutableWeakArray.h"
 #import "UtilMacros.h"
 
 @interface CoreAssetManager() <CoreAssetWorkerDelegate>
@@ -19,12 +18,7 @@
 @property (nonatomic, strong) NSMutableDictionary   *threadDescriptorsPriv;
 @property (nonatomic, assign) BOOL                  authenticationInProgress;
 @property (nonatomic, strong) NSOperationQueue      *cachedOperationQueue;
-@property (nonatomic, strong) OKOMutableWeakArray   *delegates;
 @property (nonatomic) dispatch_semaphore_t  backgroundFetchLock;
-@property (nonatomic, assign) BOOL                  terminateDownloads;
-#ifdef USE_CACHE
-@property (nonatomic, strong) NSCache               *dataCache;
-#endif
 
 @end
 
@@ -69,7 +63,7 @@
     NSString *assetPath = [CoreAssetItemNormal assetStorageDirectory];
     
     if (subpath) {
-        [assetPath stringByAppendingPathComponent:[subpath stringByAppendingString:@"/"]];
+        assetPath = [assetPath stringByAppendingPathComponent:[subpath stringByAppendingString:@"/"]];
     }
     
     NSMutableArray *list = [NSMutableArray new];
