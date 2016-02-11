@@ -183,6 +183,8 @@
         return nil;
     }
     
+    _terminateDownloads = NO;
+    
     CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
     
     if (!worker) {
