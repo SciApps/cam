@@ -20,7 +20,7 @@
 @property (nonatomic, assign) BOOL                  authenticationInProgress;
 @property (nonatomic, strong) NSOperationQueue      *cachedOperationQueue;
 @property (nonatomic, strong) OKOMutableWeakArray   *delegates;
-@property (nonatomic, strong) dispatch_semaphore_t  backgroundFetchLock;
+@property (nonatomic) dispatch_semaphore_t  backgroundFetchLock;
 @property (nonatomic, assign) BOOL                  terminateDownloads;
 #ifdef USE_CACHE
 @property (nonatomic, strong) NSCache               *dataCache;
