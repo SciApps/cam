@@ -654,7 +654,7 @@
 }
 
 - (void)removeWeakDelegate:(NSObject<CoreAssetManagerDelegate> *)delegate {
-    [_delegates addObject:delegate];
+    [_delegates removeObject:delegate];
     [_delegates compact];
 }
 
