@@ -37,6 +37,10 @@
     return [[CoreAssetItemNormal assetStorageDirectory] stringByAppendingPathComponent:_assetName];
 }
 
+- (NSString *)cacheIdentifier {
+    return [NSStringFromClass(self.class) stringByAppendingString:self.assetName];
+}
+
 - (NSData *)load {
     NSError *err = nil;
     NSData *input = [NSData dataWithContentsOfFile:[self fileSystemPath] options:NSDataReadingMappedIfSafe error:&err];

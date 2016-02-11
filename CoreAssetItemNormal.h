@@ -22,6 +22,7 @@
 
 + (NSString *)assetStorageDirectory;
 - (NSString *)fileSystemPath;
+- (NSString *)cacheIdentifier;
 
 - (NSData *)load;
 - (void)store:(NSData *)assetData;

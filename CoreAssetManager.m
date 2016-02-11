@@ -198,7 +198,7 @@
 #ifdef USE_CACHE
             id processedDataCached;
             
-            if ((processedDataCached = [_dataCache objectForKey:assetName])) {
+            if ((processedDataCached = [_dataCache objectForKey:[assetItem cacheIdentifier]])) {
                 if (completionHandler) {
                     completionHandler(processedDataCached);
                 }
@@ -227,7 +227,7 @@
                     if (assetItem.shouldCache) {
 #endif
                         if (![processedData isKindOfClass:NSNull.class]) {
-                            [_dataCache setObject:processedData forKey:assetItem.assetName];
+                            [_dataCache setObject:processedData forKey:[assetItem cacheIdentifier]];
                         }
 #if USE_CACHE > 1
                     }
@@ -259,7 +259,7 @@
                     if (assetItem.shouldCache) {
 #endif
                         if (![processedData isKindOfClass:NSNull.class]) {
-                            [_dataCache setObject:processedData forKey:assetItem.assetName];
+                            [_dataCache setObject:processedData forKey:[assetItem cacheIdentifier]];
                         }
 #if USE_CACHE > 1
                     }
@@ -456,7 +456,7 @@
                     if (removeItem.shouldCache) {
 #endif
                         if (![processedData isKindOfClass:NSNull.class]) {
-                            [_dataCache setObject:processedData forKey:removeItem.assetName];
+                            [_dataCache setObject:processedData forKey:[removeItem cacheIdentifier]];
                         }
 #if USE_CACHE > 1
                     }
@@ -614,7 +614,7 @@
     if (assetItem.shouldCache) {
 #endif
         if (![postprocessedData isKindOfClass:NSNull.class]) {
-            [_dataCache setObject:postprocessedData forKey:assetItem.assetName];
+            [_dataCache setObject:postprocessedData forKey:[assetItem cacheIdentifier]];
         }
 #if USE_CACHE > 1
     }
