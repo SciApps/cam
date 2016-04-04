@@ -117,4 +117,8 @@
     }
 }
 
++ (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler {
+    return [[CoreAssetManager manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler];
+}
+
 @end

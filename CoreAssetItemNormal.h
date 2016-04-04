@@ -37,4 +37,6 @@
 
 - (void)sendPostProcessedDataToHandlers:(id)postprocessedData;
 
++ (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
+
 @end
