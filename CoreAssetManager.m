@@ -324,6 +324,132 @@
     return nil;
 }
 
+// TODO: integrate functions
+
+- (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
+    
+    if (!failureHandler) {
+        return [self fetchAssetDataClass:clss forAssetName:assetName withCompletionHandler:completionHandler];
+    }
+    
+    //CFTimeInterval startTime = CACurrentMediaTime();
+    
+    if (!assetName.length) {
+        return nil;
+    }
+    
+    _terminateDownloads = NO;
+    
+    CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
+    
+    if (!worker) {
+        TestLog(@"fetchAssetDataClass: class not registered '%@'", NSStringFromClass(clss));
+        return nil;
+    }
+    
+    @synchronized (worker) {
+        
+        CoreAssetItemNormal *assetItem = [worker.cachedDict objectForKey:assetName];
+        
+        if (assetItem) {
+#ifdef USE_CACHE
+            id processedDataCached;
+            
+            if ((processedDataCached = [_dataCache objectForKey:[assetItem cacheIdentifier]])) {
+                if (completionHandler) {
+                    completionHandler(processedDataCached);
+                }
+                
+                return [NSNull null];
+            }
+#endif
+            
+            id blockCopy = [assetItem addCompletionHandler:completionHandler];
+            id blockCopy2 = [assetItem addFailureHandler:failureHandler];
+            
+            [_cachedOperationQueue addOperationWithBlock:^{
+                //CFTimeInterval lstartTime = CACurrentMediaTime();
+                NSData *cachedData = nil;
+                
+                @try {
+                    cachedData = [assetItem load];
+                }
+                @catch (NSException *exception) {
+                    [worker removeAssetFromCache:assetItem];
+                }
+                
+                if (cachedData) {
+                    id processedData = [assetItem postProcessData:cachedData];
+                    
+#ifdef USE_CACHE
+#if USE_CACHE > 1
+                    if (assetItem.shouldCache) {
+#endif
+                        if (![processedData isKindOfClass:NSNull.class]) {
+                            [_dataCache setObject:processedData forKey:[assetItem cacheIdentifier]];
+                        }
+#if USE_CACHE > 1
+                    }
+#endif
+#endif
+                    
+                    if (![processedData isKindOfClass:[NSNull class]]) {
+                        [assetItem performSelectorOnMainThread:@selector(sendCompletionHandlerMessages:) withObject:processedData waitUntilDone:NO];
+                    }
+                }
+                
+                //CFTimeInterval lendTime = CACurrentMediaTime();
+                
+                //TestLog(@"Load:%.1fms '%@'", (lendTime-lstartTime)*1000.0, assetItem.assetName);
+            }];
+            
+            //CFTimeInterval endTime = CACurrentMediaTime();
+            
+            //TestLog(@"Search:%.1fms", (endTime-startTime)*1000.0);
+            
+            return @[blockCopy, blockCopy2];
+        }
+        
+        assetItem = [worker.normalDict objectForKey:assetName];
+        
+        if (!assetItem) {
+            assetItem = [worker.priorDict objectForKey:assetName];
+        }
+        else {
+            [worker.normalDict removeObjectForKey:assetName];
+            [worker.priorDict setObject:assetItem forKey:assetName];
+            [worker invalidateNormalList];
+        }
+        
+        if (!assetItem) {
+            assetItem = [clss new];
+            assetItem.assetName = assetName;
+            [worker.priorDict setObject:assetItem forKey:assetName];
+        }
+        
+        assetItem.retryCount = kCoreAssetManagerFetchWithBlockRetryCount;
+        
+        if (assetItem.priorLevel != kCoreAssetManagerFetchWithBlockPriorLevel) {
+            assetItem.priorLevel = kCoreAssetManagerFetchWithBlockPriorLevel;
+            [worker invalidatePriorList];
+        }
+        
+        id blockCopy = [assetItem addCompletionHandler:completionHandler];
+        id blockCopy2 = [assetItem addFailureHandler:failureHandler];
+        
+        [worker resume];
+        [self performSelectorOnMainThread:@selector(resumeDownloadForClass:) withObject:clss waitUntilDone:NO];
+        
+        return @[blockCopy, blockCopy2];
+    }
+    
+    //CFTimeInterval endTime = CACurrentMediaTime();
+    
+    //TestLog(@"Search:%.1fms", (endTime-startTime)*1000.0);
+    
+    return nil;
+}
+
 + (id)fetchImageWithName:(NSString *)assetName withCompletionHandler:(void (^)(UIImage *image))completionHandler {
     CoreAssetManager *am = [CoreAssetManager manager];
     
@@ -575,7 +701,8 @@
         NSDictionary* errorDict = [jsonResponse objectForKey:@"error"];
         NSString* errorCode = [errorDict objectForKey:@"code"];
         
-        TestLog(@"finishedDownloadingAsset: json, error code: %@ asset: '%@' class: '%@'", errorCode, assetItem.assetName, NSStringFromClass(clss));
+        NSString *reasonString = [NSString stringWithFormat:@"finishedDownloadingAsset: json, error code: %@ asset: '%@' class: '%@'", errorCode, assetItem.assetName, NSStringFromClass(clss)];
+        TestLog(@"%@", reasonString);
         
         if (errorCode) {
             /*ServerErrorCode code = (ServerErrorCode)[errorCode integerValue];
@@ -595,19 +722,24 @@
             [self removeAssetFromDownloadDict:assetItem andDispatchCompletionHandlersWithData:nil loadAssetData:NO];
             [assetItem removeStoredFile];
             [self resumeDownloadForClass:clss];
+            [assetItem sendFailureOnMainThreadToHandlers:[NSError errorWithDomain:reasonString code:0 userInfo:nil]];
             return;
         }
     }
     else if (!connectionData.length) {
-        TestLog(@"finishedDownloadingAsset: unknown error asset: '%@' class: '%@' zero bytes", assetItem.assetName, NSStringFromClass(clss));
+        NSString *reasonString = [NSString stringWithFormat:@"finishedDownloadingAsset: unknown error asset: '%@' class: '%@' zero bytes", assetItem.assetName, NSStringFromClass(clss)];
+        TestLog(@"%@", reasonString);
         //[worker removeAssetFromCache:assetItem];
         [self resumeDownloadForClass:clss];
+        [assetItem sendFailureOnMainThreadToHandlers:[NSError errorWithDomain:reasonString code:0 userInfo:nil]];
         return;
     }
     else {
-        TestLog(@"finishedDownloadingAsset: unknown error asset: '%@' class: '%@' bytes: '%.4s' (%.2x%.2x%.2x%.2x)", assetItem.assetName, NSStringFromClass(clss), dataBytes, (UInt8)dataBytes[0], (UInt8)dataBytes[1], (UInt8)dataBytes[2], (UInt8)dataBytes[3]);
+        NSString *reasonString = [NSString stringWithFormat:@"finishedDownloadingAsset: unknown error asset: '%@' class: '%@' bytes: '%.4s' (%.2x%.2x%.2x%.2x)", assetItem.assetName, NSStringFromClass(clss), dataBytes, (UInt8)dataBytes[0], (UInt8)dataBytes[1], (UInt8)dataBytes[2], (UInt8)dataBytes[3]];
+        TestLog(@"%@", reasonString);
         [worker removeAssetFromCache:assetItem];
         [self resumeDownloadForClass:clss];
+        [assetItem sendFailureOnMainThreadToHandlers:[NSError errorWithDomain:reasonString code:0 userInfo:nil]];
         return;
     }
     
@@ -615,7 +747,7 @@
 #if USE_CACHE > 1
     if (assetItem.shouldCache) {
 #endif
-        if (![postprocessedData isKindOfClass:NSNull.class]) {
+        if (![postprocessedData isKindOfClass:NSNull.class] && ![postprocessedData isKindOfClass:CoreAssetItemErrorImage.class]) {
             [_dataCache setObject:postprocessedData forKey:[assetItem cacheIdentifier]];
         }
 #if USE_CACHE > 1
@@ -645,9 +777,11 @@
     
     Class clss = [assetItem class];
     
-    TestLog(@"failedDownloadingAsset: '%@' class: '%@'", assetItem.assetName, NSStringFromClass(clss));
+    NSString *reasonString = [NSString stringWithFormat:@"failedDownloadingAsset: '%@' class: '%@'", assetItem.assetName, NSStringFromClass(clss)];
+    TestLog(@"%@", reasonString);
     
     [self resumeDownloadForClass:clss];
+    [assetItem sendFailureOnMainThreadToHandlers:[NSError errorWithDomain:reasonString code:0 userInfo:nil]];
 }
 
 - (void)addWeakDelegate:(NSObject<CoreAssetManagerDelegate> *)delegate {

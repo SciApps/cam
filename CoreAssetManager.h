@@ -19,6 +19,7 @@
 #define USE_CACHE 2 // 0 - dont use cache, 1 - cache evrything, 2 - cache controlled by asset item (shouldCache)
 
 typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
+typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 
 @protocol CoreAssetManagerDelegate <NSObject>
 
@@ -50,6 +51,7 @@ typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 - (void)resumeDownloadAllClass;
 
 - (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
+- (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 
 /// for priorizing user stuff
 - (void)prioratizeAssetWithName:(NSString *)assetName forClass:(Class)clss priorLevel:(NSUInteger)priorLevel retryCount:(NSUInteger)retryCount startDownload:(BOOL)startDownload;

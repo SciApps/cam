@@ -103,6 +103,32 @@
     }
     
     _assetCompletionHandlers = nil;
+    _assetFailureHandlers = nil;
+}
+
+- (id)addFailureHandler:(CoreAssetManagerFailureBlock)completionHandler {
+    [_assetFailureHandlers compact];
+    
+    if (completionHandler) {
+        if (!_assetFailureHandlers) {
+            _assetFailureHandlers = [OKOMutableWeakArray new];
+        }
+        
+        return [_assetFailureHandlers addObjectReturnRef:completionHandler];
+    }
+    
+    return nil;
+}
+
+- (void)sendFailureHandlerMessages:(NSError *)reason {
+    [_assetFailureHandlers compact];
+    
+    for (CoreAssetManagerFailureBlock block in _assetFailureHandlers) {
+        block(reason);
+    }
+    
+    _assetFailureHandlers = nil;
+    _assetCompletionHandlers = nil;
 }
 
 - (id)postProcessData:(NSData *)assetData {
@@ -110,15 +136,27 @@
 }
 
 - (void)sendPostProcessedDataToHandlers:(id)postprocessedData {
-    if (self.assetCompletionHandlers.count) {
+    if (self.assetCompletionHandlers.count || self.assetFailureHandlers.count) {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             [self performSelectorOnMainThread:@selector(sendCompletionHandlerMessages:) withObject:postprocessedData waitUntilDone:NO];
         });
     }
 }
 
+- (void)sendFailureOnMainThreadToHandlers:(NSError *)reason {
+    if (self.assetCompletionHandlers.count || self.assetFailureHandlers.count) {
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [self performSelectorOnMainThread:@selector(sendFailureHandlerMessages:) withObject:reason waitUntilDone:NO];
+        });
+    }
+}
+
 + (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler {
     return [[CoreAssetManager manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler];
+}
+
++ (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
+    return [[CoreAssetManager manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler withFailureHandler:failureHandler];
 }
 
 @end
