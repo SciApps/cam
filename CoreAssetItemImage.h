@@ -9,9 +9,13 @@
 #import <Foundation/Foundation.h>
 #import "CoreAssetItemNormal.h"
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface CoreAssetItemErrorImage : UIImage
 
 @end
+
+typedef void (^CoreAssetItemImageCompletionBlock)(UIImage *assetData);
 
 @interface CoreAssetItemImage : CoreAssetItemNormal
 
@@ -21,4 +25,9 @@
 
 - (id)postProcessData:(NSData *)assetData;
 
++ (_Nullable id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetItemImageCompletionBlock)completionHandler;
++ (_Nullable id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetItemImageCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
+
 @end
+
+NS_ASSUME_NONNULL_END

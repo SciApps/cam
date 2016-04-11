@@ -9,6 +9,7 @@
 #import "CoreAssetImageView.h"
 //#import "CommunicationManager.h"
 #import "CoreAssetManager.h"
+#import "CoreAssetItemImage.h"
 
 #define ANIMATION_TRIGGER_TIME 0.01
 #define ANIMATION_DURATION 0.3333
@@ -91,6 +92,10 @@
     self.circleShaped = _circleShaped;
 }
 
++ (Class)parentCamItemClass {
+    return CoreAssetItemImage.class;
+}
+
 #pragma mark - logic
 
 - (void)layoutSubviews {
@@ -100,7 +105,7 @@
 
 - (void)setCircleShaped:(BOOL)circleShaped {
     self.layer.cornerRadius = circleShaped ? self.bounds.size.width * .5 : 0;
-    self.layer.masksToBounds = circleShaped;
+    self.layer.masksToBounds = YES;
     
     _circleShaped = circleShaped;
 }
@@ -128,9 +133,9 @@
         CFTimeInterval startTime = CACurrentMediaTime();
         NSUInteger assetNameLength = _assetName.length;
         
-        cmBlock = assetName.length ? [CoreAssetManager fetchImageWithName:assetName withCompletionHandler:^(UIImage *image) {
+        cmBlock = assetName.length ? [self.class.parentCamItemClass fetchAssetWithName:assetName withCompletionHandler:^(UIImage * _Nonnull assetData) {
             UIImage *oldImage = self.image;
-            self.image = image;
+            self.image = assetData;
             
             CFTimeInterval downloadTime = CACurrentMediaTime() - startTime;
             
@@ -141,7 +146,7 @@
                     CABasicAnimation *crossFade = [CABasicAnimation animationWithKeyPath:@"contents"];
                     crossFade.duration = ANIMATION_DURATION;
                     crossFade.fromValue = (__bridge id _Nullable)(oldImage.CGImage);
-                    crossFade.toValue = (__bridge id _Nullable)(image.CGImage);
+                    crossFade.toValue = (__bridge id _Nullable)(assetData.CGImage);
                     [self.layer addAnimation:crossFade forKey:@"animateContents"];
                 }
                 else {

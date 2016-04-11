@@ -18,6 +18,8 @@
 IB_DESIGNABLE
 @interface CoreAssetImageView : UIImageView
 
++ (Class)parentCamItemClass;
+
 @property (nonatomic, strong) UIImage *emptyImage;
 @property (nonatomic, strong) id userData;
 @property (nonatomic, strong) NSObject<CoreAssetImageViewDisplayableDelegate> *parentRecord;

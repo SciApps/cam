@@ -8,7 +8,9 @@
 
 #import <Foundation/Foundation.h>
 #import "CoreAssetManager.h"
-#import "OKOMutableWeakArray.h"
+@import util;
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface CoreAssetItemNormal : NSObject
 
@@ -20,6 +22,7 @@
 @property (nonatomic, readonly) BOOL shouldCache;
 
 + (NSUInteger)workerThreads;
++ (Class)parentCamClass;
 
 + (NSString *)assetStorageDirectory;
 - (NSString *)fileSystemPath;
@@ -42,7 +45,9 @@
 - (void)sendPostProcessedDataToHandlers:(id)postprocessedData;
 - (void)sendFailureOnMainThreadToHandlers:(NSError *)reason;
 
-+ (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
-+ (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
++ (_Nullable id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
++ (_Nullable id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 
 @end
+
+NS_ASSUME_NONNULL_END

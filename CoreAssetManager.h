@@ -8,8 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import "Manager.h"
-#import "OKOMutableWeakArray.h"
+@import util;
 
 #define kCoreAssetManagerFetchWithBlockPriorLevel 9999
 #define kCoreAssetManagerFetchWithBlockRetryCount 3
@@ -17,6 +16,8 @@
 
 #define USE_CURL 1 // 0 - use objective-c http api, 1 - use curl
 #define USE_CACHE 2 // 0 - dont use cache, 1 - cache evrything, 2 - cache controlled by asset item (shouldCache)
+
+NS_ASSUME_NONNULL_BEGIN
 
 typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
@@ -50,8 +51,8 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 
 - (void)resumeDownloadAllClass;
 
-- (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
-- (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
+- (_Nullable id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
+- (_Nullable id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 
 /// for priorizing user stuff
 - (void)prioratizeAssetWithName:(NSString *)assetName forClass:(Class)clss priorLevel:(NSUInteger)priorLevel retryCount:(NSUInteger)retryCount startDownload:(BOOL)startDownload;
@@ -64,8 +65,14 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 
 + (void)disableBackupForFilePath:(NSString *)path;
 
-+ (id)fetchImageWithName:(NSString *)assetName withCompletionHandler:(void (^)(UIImage *image))completionHandler;
++ (_Nullable id)fetchImageWithName:(NSString *)assetName withCompletionHandler:(void (^)(UIImage *image))completionHandler;
 
 + (NSArray *)listFilesInCacheDirectoryWithExtension:(NSString *)extension withSubpath:(NSString *)subpath;
 
+// methods to override
+- (void)finishedDownloadingAsset:(NSDictionary *)assetDict;
+- (void)failedDownloadingAsset:(NSDictionary *)assetDict;
+
 @end
+
+NS_ASSUME_NONNULL_END

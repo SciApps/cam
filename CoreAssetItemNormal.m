@@ -27,6 +27,10 @@
     return 1;
 }
 
++ (Class)parentCamClass {
+    return CoreAssetManager.class;
+}
+
 + (NSString *)assetStorageDirectory {
     NSString *directoryPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
     directoryPath = [directoryPath stringByAppendingString:@"/assets/"];
@@ -152,11 +156,11 @@
 }
 
 + (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler {
-    return [[CoreAssetManager manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler];
+    return [[self.parentCamClass manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler];
 }
 
 + (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
-    return [[CoreAssetManager manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler withFailureHandler:failureHandler];
+    return [[self.parentCamClass manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler withFailureHandler:failureHandler];
 }
 
 @end
