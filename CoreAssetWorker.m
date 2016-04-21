@@ -438,7 +438,13 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     // cookies
     NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
     NSMutableString *cookieBuild = [NSMutableString new];
-    for (NSHTTPCookie *cookie in cookieStorage.cookies) {
+    NSURLComponents *urlComp = [NSURLComponents componentsWithURL:request.URL resolvingAgainstBaseURL:YES];
+    NSArray *cookies = cookieStorage.cookies;
+    for (NSHTTPCookie *cookie in cookies) {
+        if (![urlComp.host containsString:cookie.domain]) {
+            continue;
+        }
+        
         if (cookieBuild.length) {
             [cookieBuild appendString:@"; "];
         }
