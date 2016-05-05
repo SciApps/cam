@@ -15,9 +15,13 @@
     return _assetCompletionHandlers.count > 0;
 }
 
+- (BOOL)shouldCacheOnDisk {
+    return YES;
+}
+
 - (BOOL)isEqual:(id)object {
     if ([self isKindOfClass:[object class]]) {
-        return [_assetName isEqualToString:[object assetName]];
+        return [_assetName isEqual:[object assetName]];
     }
     
     return NO;
@@ -42,7 +46,14 @@
 }
 
 - (NSString *)cacheIdentifier {
-    return [NSStringFromClass(self.class) stringByAppendingString:self.assetName];
+    if ([self.assetName isKindOfClass:NSString.class]) {
+        return [NSStringFromClass(self.class) stringByAppendingString:self.assetName];
+    }
+    else if ([self.assetName respondsToSelector:@selector(hash)]) {
+        return [NSStringFromClass(self.class) stringByAppendingFormat:@"%lu", ((NSString *)self.assetName).hash];
+    }
+    
+    return nil;
 }
 
 - (NSData *)load {
@@ -155,11 +166,11 @@
     }
 }
 
-+ (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler {
++ (id)fetchAssetWithName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler {
     return [[self.parentCamClass manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler];
 }
 
-+ (id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
++ (id)fetchAssetWithName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
     return [[self.parentCamClass manager] fetchAssetDataClass:self.class forAssetName:assetName withCompletionHandler:completionHandler withFailureHandler:failureHandler];
 }
 

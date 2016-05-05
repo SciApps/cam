@@ -29,6 +29,10 @@
 
 @implementation CURLSession
 
+- (void)dealloc {
+    curl_slist_free_all(_headers);
+}
+
 @end
 
 typedef enum: NSUInteger {
@@ -204,7 +208,75 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     if ([_delegate respondsToSelector:@selector(finishedDownloadingAsset:)]) {
         id postprocessedData = [assetItem postProcessData:connectionData];
         
+        CoreAssetManager *assetManager = [[assetItem.class parentCamClass] manager];
+        
+        if([assetManager determineLoginFailure:postprocessedData]) {
+            [assetManager.loginCondition lock];
+            
+            @synchronized (assetManager.loginCount) {
+                NSUInteger count = assetManager.loginCount.unsignedIntegerValue;
+                assetManager.loginCount = @(count + 1);
+                
+                if (!count) {
+                    [assetManager performSelectorOnMainThread:@selector(performRelogin) withObject:nil waitUntilDone:NO];
+                }
+            }
+            
+            [assetManager.loginCondition wait];
+            
+            @synchronized (assetManager.loginSuccessful) {
+                NSUInteger success = assetManager.loginSuccessful.unsignedIntegerValue;
+            }
+            
+            [assetManager.loginCondition unlock];
+        }
+        
         [_delegate performSelectorOnMainThread:@selector(finishedDownloadingAsset:) withObject:@{kCoreAssetWorkerAssetItem:assetItem, kCoreAssetWorkerAssetData:connectionData, kCoreAssetWorkerAssetPostprocessedData:postprocessedData} waitUntilDone:NO];
+    }
+}
+
+- (void)sendDelegateFinishedDownloadingAsset:(CURLSession *)curlSession  {
+    if ([_delegate respondsToSelector:@selector(finishedDownloadingAsset:)]) {
+        id postprocessedData = [curlSession.assetConnection.assetItem postProcessData:curlSession.assetConnection.connectionData];
+        
+        CoreAssetManager *assetManager = [[curlSession.assetConnection.assetItem.class parentCamClass] manager];
+        
+        if([assetManager determineLoginFailure:postprocessedData]) {
+            [assetManager.loginCondition lock];
+            
+            @synchronized (assetManager.loginCount) {
+                NSUInteger count = assetManager.loginCount.unsignedIntegerValue;
+                assetManager.loginCount = @(count + 1);
+                
+                if (!count) {
+                    [assetManager performSelectorOnMainThread:@selector(performRelogin) withObject:nil waitUntilDone:NO];
+                }
+            }
+            
+            [assetManager.loginCondition wait];
+            
+            NSUInteger success;
+            @synchronized (assetManager.loginSuccessful) {
+                success = assetManager.loginSuccessful.unsignedIntegerValue;
+            }
+            
+            [assetManager.loginCondition unlock];
+            
+            if (!success) {
+                TestLog(@"CURL: unable to login");
+                [_delegate performSelectorOnMainThread:@selector(failedDownloadingAsset:) withObject:@{kCoreAssetWorkerAssetItem:curlSession.assetConnection.assetItem} waitUntilDone:NO];
+            }
+            else {
+                curlSession.assetConnection.connectionData = nil;
+                curlSession.request = [curlSession.assetConnection.assetItem createURLRequest];
+                //[self performSelector:@selector(rl_curlPerform:) onThread:_thread withObject:curlSession waitUntilDone:NO];
+                [self curlStartDownload:curlSession.assetConnection request:curlSession.request];
+            }
+            
+            return;
+        }
+        
+        [_delegate performSelectorOnMainThread:@selector(finishedDownloadingAsset:) withObject:@{kCoreAssetWorkerAssetItem:curlSession.assetConnection.assetItem, kCoreAssetWorkerAssetData:curlSession.assetConnection.connectionData, kCoreAssetWorkerAssetPostprocessedData:postprocessedData} waitUntilDone:NO];
     }
 }
 
@@ -341,15 +413,16 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         attempts++;
     }
     
+    long http_code = 0;
+    curl_easy_getinfo(_curl, CURLINFO_RESPONSE_CODE, &http_code);
+    
     //CFTimeInterval endTime = CACurrentMediaTime() - startTime;
     
-    curl_slist_free_all(curlSession.headers);
+    //curl_slist_free_all(curlSession.headers);
     //curl_easy_cleanup(curl);
     //curl = NULL;
     
-    /*long http_code = 0;
-     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-     double contentLength = 0;
+     /*double contentLength = 0;
      curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &contentLength);*/
     
     CoreAssetURLConnection *assetConnection = curlSession.assetConnection;
@@ -379,18 +452,20 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
             assetConnection.connectionData = [NSMutableData new];
         }
         
-        if (theResult != CURLE_OK || ![assetConnection validLength]) {
-            TestLog(@"CURL: %@ (attempts: %i)", CURLCodeToNSString(theResult), attempts);
+        if (theResult != CURLE_OK || ![assetConnection validLength] || http_code != 200) {
+            TestLog(@"CURL: %@ HTTP_CODE: %d (attempts: %i)", CURLCodeToNSString(theResult), http_code, attempts);
             [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
         }
         else {
             if (assetConnection.connectionData.length) {
-                @try {
-                    [assetConnection.assetItem store:assetConnection.connectionData];
-                }
-                @catch (NSException *exception) {
-                    [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
-                    return;
+                if (assetConnection.assetItem.shouldCacheOnDisk) {
+                    @try {
+                        [assetConnection.assetItem store:assetConnection.connectionData];
+                    }
+                    @catch (NSException *exception) {
+                        [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
+                        return;
+                    }
                 }
             }
             
@@ -400,7 +475,7 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
                 return;
             }
             
-            [self sendDelegateFinishedDownloadingAsset:assetConnection.assetItem connectionData:assetConnection.connectionData];
+            [self sendDelegateFinishedDownloadingAsset:curlSession];
         }
     }
 }
@@ -438,13 +513,7 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     // cookies
     NSHTTPCookieStorage *cookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
     NSMutableString *cookieBuild = [NSMutableString new];
-    NSURLComponents *urlComp = [NSURLComponents componentsWithURL:request.URL resolvingAgainstBaseURL:YES];
-    NSArray *cookies = cookieStorage.cookies;
-    for (NSHTTPCookie *cookie in cookies) {
-        if (![urlComp.host containsString:cookie.domain]) {
-            continue;
-        }
-        
+    for (NSHTTPCookie *cookie in cookieStorage.cookies) {
         if (cookieBuild.length) {
             [cookieBuild appendString:@"; "];
         }
@@ -466,8 +535,20 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     
     curl_easy_setopt(_curl, CURLOPT_HTTPHEADER, curlSession.headers);
     
-    curl_easy_setopt(_curl, CURLOPT_UPLOAD, 0L);
-    curl_easy_setopt(_curl, CURLOPT_HTTPGET, 1L);
+    if ([request.HTTPMethod isEqualToString:@"GET"]) {
+        curl_easy_setopt(_curl, CURLOPT_UPLOAD, 0L);
+        curl_easy_setopt(_curl, CURLOPT_HTTPGET, 1L);
+    }
+    else if ([request.HTTPMethod isEqualToString:@"POST"]) {
+        curl_easy_setopt(_curl, CURLOPT_UPLOAD, 0L);
+        curl_easy_setopt(_curl, CURLOPT_HTTPPOST, 1L);
+        
+        if (request.HTTPBody.length) {
+            curl_easy_setopt(_curl, CURLOPT_POSTFIELDSIZE, request.HTTPBody.length);
+            curl_easy_setopt(_curl, CURLOPT_POSTFIELDS, request.HTTPBody.bytes);
+        }
+    }
+    
     curl_easy_setopt(_curl, CURLOPT_SSL_VERIFYHOST, 2L);
     curl_easy_setopt(_curl, CURLOPT_SSL_VERIFYPEER, 1L);
     
@@ -573,18 +654,20 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         NSError* error = nil;
         
         if ([assetConnection validLength]) {
-            @try {
-                [assetConnection.assetItem store:assetConnection.connectionData];
-            }
-            @catch (NSException *exception) {
-                error = [NSError errorWithDomain:exception.name code:0 userInfo:exception.userInfo];
-                
-                if (!assetConnection.assetItem.retryCount) {
-                    [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
+            if (assetConnection.assetItem.shouldCacheOnDisk) {
+                @try {
+                    [assetConnection.assetItem store:assetConnection.connectionData];
                 }
-                
-                [self clearTask:task didFailWithError:error];
-                return;
+                @catch (NSException *exception) {
+                    error = [NSError errorWithDomain:exception.name code:0 userInfo:exception.userInfo];
+                    
+                    if (!assetConnection.assetItem.retryCount) {
+                        [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
+                    }
+                    
+                    [self clearTask:task didFailWithError:error];
+                    return;
+                }
             }
             
             // storing the file takes lot of time, so check for termination request again
@@ -712,14 +795,16 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         }
         
         if ([assetConnection validLength]) {
-            @try {
-                [assetConnection.assetItem store:assetConnection.connectionData];
-            }
-            @catch (NSException *exception) {
-                error = [NSError errorWithDomain:exception.name code:0 userInfo:exception.userInfo];
-                [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
-                [self clearConnection:connection didFailWithError:error];
-                return;
+            if (assetConnection.assetItem.shouldCacheOnDisk) {
+                @try {
+                    [assetConnection.assetItem store:assetConnection.connectionData];
+                }
+                @catch (NSException *exception) {
+                    error = [NSError errorWithDomain:exception.name code:0 userInfo:exception.userInfo];
+                    [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
+                    [self clearConnection:connection didFailWithError:error];
+                    return;
+                }
             }
             
             // storing the file takes lot of time, so check for termination request again

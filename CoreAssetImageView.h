@@ -24,6 +24,6 @@ IB_DESIGNABLE
 @property (nonatomic, strong) id userData;
 @property (nonatomic, strong) NSObject<CoreAssetImageViewDisplayableDelegate> *parentRecord;
 @property (nonatomic) IBInspectable BOOL circleShaped;
-@property (nonatomic, strong) NSString *assetName;
+@property (nonatomic, strong) id assetName;
 
 @end

@@ -127,11 +127,11 @@
 }*/
 
 - (void)setAssetName:(NSString *)assetName {
-    if (![assetName isEqualToString:_assetName]) {
+    if (![assetName isEqualToString:_assetName] && (!_assetName || [_assetName isKindOfClass:NSString.class])) {
         self.image = _emptyImage;
         
         CFTimeInterval startTime = CACurrentMediaTime();
-        NSUInteger assetNameLength = _assetName.length;
+        NSUInteger assetNameLength = ((NSString *)_assetName).length;
         
         cmBlock = assetName.length ? [self.class.parentCamItemClass fetchAssetWithName:assetName withCompletionHandler:^(UIImage * _Nonnull assetData) {
             UIImage *oldImage = self.image;

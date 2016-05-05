@@ -27,6 +27,28 @@
     return request;
 }
 
+- (NSData *)serializeRequestJSON {
+    NSError *error;
+    id jsonData = [NSJSONSerialization dataWithJSONObject:super.assetName options:0 error:&error];
+    
+    if (error || !jsonData) {
+        TestLog(@"%@ %@: JSON serialization error: '%@'", NSStringFromClass(self.class), NSStringFromSelector(_cmd), error.localizedDescription);
+    }
+    
+    return jsonData;
+}
+
+- (nullable NSData *)serializeRequestJSONWithInput:(id)input {
+    NSError *error;
+    id jsonData = [NSJSONSerialization dataWithJSONObject:input options:0 error:&error];
+    
+    if (error || !jsonData) {
+        TestLog(@"%@ %@: JSON serialization error: '%@'", NSStringFromClass(self.class), NSStringFromSelector(_cmd), error.localizedDescription);
+    }
+    
+    return jsonData;
+}
+
 - (id)postProcessData:(NSData *)assetData {
     NSError *error;
     id jsonData = [NSJSONSerialization JSONObjectWithData:assetData options:0 error:&error];

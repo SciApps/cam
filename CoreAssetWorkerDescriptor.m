@@ -236,12 +236,14 @@
             [_workersAssetItem replaceObjectAtIndex:workerIdx withObject:[NSNull null]];
         }
         
-        NSData *connectionData = [assetDict objectForKey:kCoreAssetWorkerAssetData];
-        if (connectionData.length) {
-            [_cachedDict setObject:assetItem forKey:assetItem.assetName];
-        }
-        else {
-            [assetItem removeStoredFile];
+        if (assetItem.shouldCacheOnDisk) {
+            NSData *connectionData = [assetDict objectForKey:kCoreAssetWorkerAssetData];
+            if (connectionData.length) {
+                [_cachedDict setObject:assetItem forKey:assetItem.assetName];
+            }
+            else {
+                [assetItem removeStoredFile];
+            }
         }
         
         if (!_backgroundFetchMode) {

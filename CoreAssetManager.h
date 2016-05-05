@@ -41,6 +41,9 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 #ifdef USE_CACHE
 @property (nonatomic, strong) NSCache               *dataCache;
 #endif
+@property (nonatomic, strong) NSCondition           *loginCondition;
+@property (nonatomic, strong) NSNumber              *loginCount;
+@property (nonatomic, strong) NSNumber              *loginSuccessful;
 
 - (void)registerThreadForClass:(Class)clss;
 
@@ -50,9 +53,10 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 - (void)removeAllCaches;
 
 - (void)resumeDownloadAllClass;
+- (void)performRelogin;
 
-- (_Nullable id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
-- (_Nullable id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
+- (_Nullable id)fetchAssetDataClass:(Class)clss forAssetName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
+- (_Nullable id)fetchAssetDataClass:(Class)clss forAssetName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 
 /// for priorizing user stuff
 - (void)prioratizeAssetWithName:(NSString *)assetName forClass:(Class)clss priorLevel:(NSUInteger)priorLevel retryCount:(NSUInteger)retryCount startDownload:(BOOL)startDownload;
@@ -72,6 +76,8 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 // methods to override
 - (void)finishedDownloadingAsset:(NSDictionary *)assetDict;
 - (void)failedDownloadingAsset:(NSDictionary *)assetDict;
+- (BOOL)determineLoginFailure:(id)postprocessedData; // warning: this method is being called from one of the worker threads
+- (void)reauthenticateWithCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 
 @end
 

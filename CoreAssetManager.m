@@ -54,6 +54,9 @@
 #ifdef USE_CACHE
         _dataCache = [NSCache new];
 #endif
+        _loginCondition = [NSCondition new];
+        _loginCount = @0;
+        _loginSuccessful = @0;
     }
     
     return self;
@@ -175,11 +178,11 @@
 #endif
 }
 
-- (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler {
+- (id)fetchAssetDataClass:(Class)clss forAssetName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler {
     
     //CFTimeInterval startTime = CACurrentMediaTime();
     
-    if (!assetName.length) {
+    if (!assetName) {
         return nil;
     }
     
@@ -326,7 +329,7 @@
 
 // TODO: integrate functions
 
-- (id)fetchAssetDataClass:(Class)clss forAssetName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
+- (id)fetchAssetDataClass:(Class)clss forAssetName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
     
     if (!failureHandler) {
         return [self fetchAssetDataClass:clss forAssetName:assetName withCompletionHandler:completionHandler];
@@ -334,7 +337,7 @@
     
     //CFTimeInterval startTime = CACurrentMediaTime();
     
-    if (!assetName.length) {
+    if (!assetName) {
         return nil;
     }
     
@@ -792,6 +795,33 @@
 - (void)removeWeakDelegate:(NSObject<CoreAssetManagerDelegate> *)delegate {
     [_delegates removeObject:delegate];
     [_delegates compact];
+}
+
+- (BOOL)determineLoginFailure:(id)postprocessedData {
+    return NO;
+}
+
+- (void)reauthenticateWithCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
+    completionHandler(nil);
+}
+
+- (void)performRelogin {
+    NSUInteger count;
+    @synchronized (_loginCount) {
+        count = _loginCount.unsignedIntegerValue;
+    }
+    
+    [_loginCondition lock];
+    
+    [self reauthenticateWithCompletionHandler:^(id assetData) {
+        self.loginSuccessful = @1;
+        [_loginCondition signal];
+        [_loginCondition unlock];
+    } withFailureHandler:^(NSError *reason) {
+        self.loginSuccessful = @0;
+        [_loginCondition signal];
+        [_loginCondition unlock];
+    }];
 }
 
 #pragma mark - helper methods

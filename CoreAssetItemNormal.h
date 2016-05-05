@@ -18,8 +18,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) OKOMutableWeakArray* assetFailureHandlers;
 @property (nonatomic, assign) NSUInteger priorLevel;
 @property (nonatomic, assign) NSUInteger retryCount;
-@property (nonatomic, strong) NSString *assetName;
+@property (nonatomic, strong) id assetName;
 @property (nonatomic, readonly) BOOL shouldCache;
+@property (nonatomic, readonly) BOOL shouldCacheOnDisk;
 
 + (NSUInteger)workerThreads;
 + (Class)parentCamClass;
@@ -45,8 +46,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)sendPostProcessedDataToHandlers:(id)postprocessedData;
 - (void)sendFailureOnMainThreadToHandlers:(NSError *)reason;
 
-+ (_Nullable id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
-+ (_Nullable id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
++ (_Nullable id)fetchAssetWithName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
++ (_Nullable id)fetchAssetWithName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 
 @end
 
