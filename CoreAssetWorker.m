@@ -253,7 +253,18 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
                 }
             }
             
-            [assetManager.loginCondition wait];
+            if(![assetManager.loginCondition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:10]]) {
+                TestLog(@"CoreAssetWorker: timeout reached");
+                [_delegate performSelectorOnMainThread:@selector(failedDownloadingAsset:) withObject:@{kCoreAssetWorkerAssetItem:curlSession.assetConnection.assetItem} waitUntilDone:NO];
+                [assetManager.loginCondition unlock];
+                
+                @synchronized (assetManager.loginCount) {
+                    NSUInteger count = assetManager.loginCount.unsignedIntegerValue;
+                    assetManager.loginCount = @(count - 1);
+                }
+                
+                return;
+            }
             
             NSUInteger success;
             @synchronized (assetManager.loginSuccessful) {
@@ -263,7 +274,7 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
             [assetManager.loginCondition unlock];
             
             if (!success) {
-                TestLog(@"CURL: unable to login");
+                TestLog(@"CoreAssetWorker: unable to login");
                 [_delegate performSelectorOnMainThread:@selector(failedDownloadingAsset:) withObject:@{kCoreAssetWorkerAssetItem:curlSession.assetConnection.assetItem} waitUntilDone:NO];
             }
             else {
@@ -271,6 +282,11 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
                 curlSession.request = [curlSession.assetConnection.assetItem createURLRequest];
                 //[self performSelector:@selector(rl_curlPerform:) onThread:_thread withObject:curlSession waitUntilDone:NO];
                 [self curlStartDownload:curlSession.assetConnection request:curlSession.request];
+            }
+            
+            @synchronized (assetManager.loginCount) {
+                NSUInteger count = assetManager.loginCount.unsignedIntegerValue;
+                assetManager.loginCount = @(count - 1);
             }
             
             return;

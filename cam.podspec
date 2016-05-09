@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "cam"
-  s.version      = "0.3.0"
+  s.version      = "0.3.1"
   s.summary      = "A short description of cam."
 
   # This description is used to generate tags and improve search results.
@@ -79,7 +79,7 @@ Pod::Spec.new do |s|
   #  Supports git, hg, bzr, svn and HTTP.
   #
 
-  s.source       = { :git => "http://192.168.10.2/stash/scm/~robert.balint/cam.git", :tag => "0.3.0" }
+  s.source       = { :git => "http://192.168.10.2/stash/scm/~robert.balint/cam.git", :tag => "0.3.1" }
 
 
   # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #

@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (NSURLRequest *)createURLRequest;
 
-- (id)postProcessData:(NSData *)assetData;
+- (_Nullable id)postProcessData:(NSData *)assetData;
 
 - (nullable NSData *)serializeRequestJSON;
 - (nullable NSData *)serializeRequestJSONWithInput:(id)input;

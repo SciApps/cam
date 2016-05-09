@@ -41,7 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (id)addFailureHandler:(CoreAssetManagerFailureBlock)completionHandler;
 - (void)sendFailureHandlerMessages:(NSError *)reason;
 
-- (id)postProcessData:(NSData *)assetData;
+- (_Nullable id)postProcessData:(NSData *)assetData;
 
 - (void)sendPostProcessedDataToHandlers:(id)postprocessedData;
 - (void)sendFailureOnMainThreadToHandlers:(NSError *)reason;
