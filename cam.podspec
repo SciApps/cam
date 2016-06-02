@@ -121,7 +121,7 @@ Pod::Spec.new do |s|
   # s.library   = "iconv"
   s.libraries = "z", "curl-ios"
 
-  s.vendored_frameworks = 'util.framework'
+  # s.vendored_frameworks = 'util.framework'
 
 
   # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
@@ -133,6 +133,8 @@ Pod::Spec.new do |s|
   # s.requires_arc = true
 
   s.xcconfig = { "LIBRARY_SEARCH_PATHS" => "$(PODS_ROOT)/curl/lib", "FRAMEWORK_SEARCH_PATHS" => "$(PODS_ROOT)/util", "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libz" }
-  # s.dependency "JSONKit", "~> 1.4"
+
+s.dependency "util"
+s.dependency "CURLConnection"
 
 end
