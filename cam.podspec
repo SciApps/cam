@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "cam"
-  s.version      = "0.3.1"
+  s.version      = "0.3.2"
   s.summary      = "A short description of cam."
 
   # This description is used to generate tags and improve search results.
@@ -79,7 +79,7 @@ Pod::Spec.new do |s|
   #  Supports git, hg, bzr, svn and HTTP.
   #
 
-  s.source       = { :git => "http://192.168.10.2/stash/scm/~robert.balint/cam.git", :tag => "0.3.1" }
+  s.source       = { :git => "http://192.168.10.2/stash/scm/~robert.balint/cam.git", :tag => "0.3.2" }
 
 
   # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
@@ -117,10 +117,10 @@ Pod::Spec.new do |s|
   #
 
   # s.framework  = "SomeFramework"
-  # s.frameworks = "SomeFramework", "AnotherFramework"
+  s.frameworks = "util", "CURLConnection"
 
   # s.library   = "iconv"
-  # s.libraries = "iconv", "xml2"
+  s.libraries = "z", "curl-ios"
 
 
   # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
@@ -131,7 +131,7 @@ Pod::Spec.new do |s|
 
   # s.requires_arc = true
 
-  # s.xcconfig = { "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libxml2" }
+  s.xcconfig = { "LIBRARY_SEARCH_PATHS": "\"$(PODS_ROOT)/curl/lib\"", "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libz" }
   # s.dependency "JSONKit", "~> 1.4"
 
 end

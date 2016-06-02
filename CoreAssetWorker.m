@@ -422,8 +422,9 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     
     int attempts = 1;
     CURLcode theResult = CURL_LAST;
+    CoreAssetManager *assetManager = [[curlSession.assetConnection.assetItem.class parentCamClass] manager];
     
-    while((theResult = curl_easy_perform(_curl)) != CURLE_OK && curlSession.assetConnection.assetItem.retryCount) {
+    while(assetManager.networkStatus != CAMNotReachable && (theResult = curl_easy_perform(_curl)) != CURLE_OK && curlSession.assetConnection.assetItem.retryCount) {
         curlSession.assetConnection.assetItem.retryCount--;
         curlSession.assetConnection.connectionData = nil;
         attempts++;
@@ -469,7 +470,7 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         }
         
         if (theResult != CURLE_OK || ![assetConnection validLength] || http_code != 200) {
-            TestLog(@"CURL: %@ HTTP_CODE: %d (attempts: %i)", CURLCodeToNSString(theResult), http_code, attempts);
+            TestLog(@"CURL: %@ HTTP_CODE: %d (attempts: %i) Network Status: %d", CURLCodeToNSString(theResult), http_code, attempts, assetManager.networkStatus);
             [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
         }
         else {

@@ -21,6 +21,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong) id assetName;
 @property (nonatomic, readonly) BOOL shouldCache;
 @property (nonatomic, readonly) BOOL shouldCacheOnDisk;
+@property (nonatomic, readonly) BOOL retrieveCachedObjectOnFailure;
+@property (nonatomic, readonly) NSTimeInterval cacheMaxAge;
 
 + (NSUInteger)workerThreads;
 + (Class)parentCamClass;
@@ -32,6 +34,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSData *)load;
 - (void)store:(NSData *)assetData;
 - (void)removeStoredFile;
+- (NSDate *)storedFileModificationDate;
+- (BOOL)storedFileCachingAgeExpired;
 
 - (NSURLRequest *)createURLRequest;
 

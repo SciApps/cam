@@ -19,6 +19,14 @@
     return YES;
 }
 
+- (BOOL)retrieveCachedObjectOnFailure {
+    return NO;
+}
+
+- (NSTimeInterval)cacheMaxAge {
+    return -1;
+}
+
 - (BOOL)isEqual:(id)object {
     if ([self isKindOfClass:[object class]]) {
         return [_assetName isEqual:[object assetName]];
@@ -89,6 +97,21 @@
 
 - (void)removeStoredFile {
     [[NSFileManager defaultManager] removeItemAtPath:[self fileSystemPath] error:nil];
+}
+
+- (NSDate *)storedFileModificationDate {
+    return [[[NSFileManager defaultManager] attributesOfItemAtPath:[self fileSystemPath] error:nil] fileModificationDate];
+}
+
+- (BOOL)storedFileCachingAgeExpired {
+    NSDate *modDate = [self storedFileModificationDate];
+    
+    if (self.cacheMaxAge > 0 && modDate) {
+        NSTimeInterval delta = [modDate timeIntervalSinceNow];
+        return delta < -self.cacheMaxAge;
+    }
+    
+    return self.cacheMaxAge > 0;
 }
 
 - (NSURLRequest *)createURLRequest {

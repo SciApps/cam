@@ -12,14 +12,33 @@
 #import "CoreAssetItemImage.h"
 #import "UtilMacros.h"
 
+#import <SystemConfiguration/SystemConfiguration.h>
+#import <arpa/inet.h>
+#import <ifaddrs.h>
+#import <netdb.h>
+#import <sys/socket.h>
+#import <netinet/in.h>
+
 @interface CoreAssetManager() <CoreAssetWorkerDelegate>
 
 @property (nonatomic, strong) NSMutableDictionary   *threadDescriptorsPriv;
 @property (nonatomic, assign) BOOL                  authenticationInProgress;
 @property (nonatomic, strong) NSOperationQueue      *cachedOperationQueue;
-@property (nonatomic) dispatch_semaphore_t  backgroundFetchLock;
+@property (nonatomic) dispatch_semaphore_t          backgroundFetchLock;
+@property (nonatomic) SCNetworkReachabilityRef      reachability;
+
+- (void)_processReachabilityFlags:(SCNetworkReachabilityFlags)flags;
 
 @end
+
+static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReachabilityFlags flags, void *info) {
+#pragma unused (target, flags)
+    NSCAssert(info != NULL, @"info was NULL in ReachabilityCallback");
+    NSCAssert([(__bridge NSObject*) info isKindOfClass:CoreAssetManager.class], @"info was wrong class in ReachabilityCallback");
+    
+    CoreAssetManager* cam = (__bridge CoreAssetManager *)info;
+    [cam _processReachabilityFlags:flags];
+}
 
 @implementation CoreAssetManager
 
@@ -35,10 +54,9 @@
     return instance;
 }*/
 
--(NSDictionary *)threadDescriptors {
+- (NSDictionary *)threadDescriptors {
     return _threadDescriptorsPriv.copy;
 }
-
 
 - (instancetype)init {
     self = [super init];
@@ -53,13 +71,93 @@
         _terminateDownloads = NO;
 #ifdef USE_CACHE
         _dataCache = [NSCache new];
+        _dataCacheAges = [NSMutableDictionary new];
 #endif
         _loginCondition = [NSCondition new];
         _loginCount = @0;
         _loginSuccessful = @0;
+        [self _initReachability];
     }
     
     return self;
+}
+
+- (void)dealloc {
+    SCNetworkReachabilityUnscheduleFromRunLoop(_reachability, CFRunLoopGetMain(), kCFRunLoopDefaultMode);
+    CFRelease(_reachability);
+    _reachability = NULL;
+}
+
+- (void)_initReachability {
+    NSString *hostName = [self reachabilityHost];
+    
+    if (hostName.length) {
+        _reachability = SCNetworkReachabilityCreateWithName(NULL, hostName.UTF8String);
+    }
+    else {
+        struct sockaddr_in zeroAddress;
+        bzero(&zeroAddress, sizeof(zeroAddress));
+        zeroAddress.sin_len = sizeof(zeroAddress);
+        zeroAddress.sin_family = AF_INET;
+        
+        _reachability = SCNetworkReachabilityCreateWithAddress(kCFAllocatorDefault, (struct sockaddr *)&zeroAddress);
+    }
+    
+    SCNetworkReachabilityContext context = {0, (__bridge void *)(self), NULL, NULL, NULL};
+    
+    if (SCNetworkReachabilitySetCallback(_reachability, ReachabilityCallback, &context)) {
+        if (SCNetworkReachabilityScheduleWithRunLoop(_reachability, CFRunLoopGetMain(), kCFRunLoopDefaultMode)) {
+            TestLog(@"SCNetworkReachabilityScheduleWithRunLoop success");
+        }
+        else {
+            TestLog(@"SCNetworkReachabilityScheduleWithRunLoop failed");
+        }
+    }
+    else {
+        TestLog(@"SCNetworkReachabilitySetCallback failed");
+    }
+    
+#if TARGET_IPHONE_SIMULATOR
+    self.networkStatus = CAMReachableViaWiFi;
+#else
+    SCNetworkReachabilityFlags flags;
+    
+    if (SCNetworkReachabilityGetFlags(_reachability, &flags)) {
+        [self _processReachabilityFlags:flags];
+    }
+#endif
+}
+
+- (void)_processReachabilityFlags:(SCNetworkReachabilityFlags)flags {
+    if ((flags & kSCNetworkReachabilityFlagsReachable) == 0) {
+        self.networkStatus = CAMNotReachable;
+        [self _printReachabilityStatus];
+        return;
+    }
+    
+    CoreAssetManagerNetworkStatus networkStatus = CAMNotReachable;
+    
+    if ((flags & kSCNetworkReachabilityFlagsConnectionRequired) == 0) {
+        networkStatus = CAMReachableViaWiFi;
+    }
+    
+    if ((((flags & kSCNetworkReachabilityFlagsConnectionOnDemand ) != 0) || (flags & kSCNetworkReachabilityFlagsConnectionOnTraffic) != 0)) {
+        if ((flags & kSCNetworkReachabilityFlagsInterventionRequired) == 0) {
+            networkStatus = CAMReachableViaWiFi;
+        }
+    }
+    
+    if ((flags & kSCNetworkReachabilityFlagsIsWWAN) == kSCNetworkReachabilityFlagsIsWWAN) {
+        networkStatus = CAMReachableViaWWAN;
+    }
+    
+    self.networkStatus = networkStatus;
+    [self _printReachabilityStatus];
+}
+
+- (void)_printReachabilityStatus {
+    NSArray<NSString *> *networkStatusLabels = @[@"CAMNotReachable", @"CAMReachableViaWiFi", @"CAMReachableViaWWAN"];
+    TestLog(@"CoreAssetManager.Reachability: %@", [networkStatusLabels objectAtIndex:self.networkStatus]);
 }
 
 + (NSArray *)listFilesInCacheDirectoryWithExtension:(NSString *)extension withSubpath:(NSString *)subpath {
@@ -178,6 +276,17 @@
 #endif
 }
 
+- (BOOL)_isAssetMemoryCacheAgeExpired:(CoreAssetItemNormal *)assetItem {
+    NSDate *modDate = [_dataCacheAges objectForKey:assetItem.cacheIdentifier];
+    
+    if (assetItem.cacheMaxAge > 0 && modDate) {
+        NSTimeInterval delta = [modDate timeIntervalSinceNow];
+        return delta < -assetItem.cacheMaxAge;
+    }
+    
+    return assetItem.cacheMaxAge > 0;
+}
+
 - (id)fetchAssetDataClass:(Class)clss forAssetName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler {
     
     //CFTimeInterval startTime = CACurrentMediaTime();
@@ -199,8 +308,13 @@
         
         CoreAssetItemNormal *assetItem = [worker.cachedDict objectForKey:assetName];
         
-        if (assetItem) {
+        while (assetItem) {
 #ifdef USE_CACHE
+            if ([self _isAssetMemoryCacheAgeExpired:assetItem]) {
+                [_dataCacheAges removeObjectForKey:assetItem.cacheIdentifier];
+                [_dataCache removeObjectForKey:assetItem.cacheIdentifier];
+            }
+            
             id processedDataCached;
             
             if ((processedDataCached = [_dataCache objectForKey:[assetItem cacheIdentifier]])) {
@@ -211,6 +325,10 @@
                 return [NSNull null];
             }
 #endif
+            if (assetItem.storedFileCachingAgeExpired) {
+                [worker removeAssetFromCache:assetItem removeFile:!assetItem.retrieveCachedObjectOnFailure];
+                break;
+            }
             
             id blockCopy = [assetItem addCompletionHandler:completionHandler];
             
@@ -253,7 +371,7 @@
                     cachedData = [assetItem load];
                 }
                 @catch (NSException *exception) {
-                    [worker removeAssetFromCache:assetItem];
+                    [worker removeAssetFromCache:assetItem removeFile:YES];
                 }
                 
                 if (cachedData) {
@@ -354,8 +472,13 @@
         
         CoreAssetItemNormal *assetItem = [worker.cachedDict objectForKey:assetName];
         
-        if (assetItem) {
+        while (assetItem) {
 #ifdef USE_CACHE
+            if ([self _isAssetMemoryCacheAgeExpired:assetItem]) {
+                [_dataCacheAges removeObjectForKey:assetItem.cacheIdentifier];
+                [_dataCache removeObjectForKey:assetItem.cacheIdentifier];
+            }
+            
             id processedDataCached;
             
             if ((processedDataCached = [_dataCache objectForKey:[assetItem cacheIdentifier]])) {
@@ -366,6 +489,10 @@
                 return [NSNull null];
             }
 #endif
+            if (assetItem.storedFileCachingAgeExpired) {
+                [worker removeAssetFromCache:assetItem removeFile:!assetItem.retrieveCachedObjectOnFailure];
+                break;
+            }
             
             id blockCopy = [assetItem addCompletionHandler:completionHandler];
             id blockCopy2 = [assetItem addFailureHandler:failureHandler];
@@ -378,7 +505,7 @@
                     cachedData = [assetItem load];
                 }
                 @catch (NSException *exception) {
-                    [worker removeAssetFromCache:assetItem];
+                    [worker removeAssetFromCache:assetItem removeFile:YES];
                 }
                 
                 if (cachedData) {
@@ -695,7 +822,7 @@
         
         if ([postprocessedData isKindOfClass:[CoreAssetItemErrorImage class]]) {
             TestLog(@"finishedDownloadingAsset: no-pic error asset: '%@' class: '%@'", assetItem.assetName, NSStringFromClass(clss));
-            [worker removeAssetFromCache:assetItem];
+            [worker removeAssetFromCache:assetItem removeFile:YES];
         } else {
             worker.successfullDownloadsNum = @(worker.successfullDownloadsNum.integerValue + 1);
         }
@@ -740,7 +867,7 @@
     else {
         NSString *reasonString = [NSString stringWithFormat:@"finishedDownloadingAsset: unknown error asset: '%@' class: '%@' bytes: '%.4s' (%.2x%.2x%.2x%.2x)", assetItem.assetName, NSStringFromClass(clss), dataBytes, (UInt8)dataBytes[0], (UInt8)dataBytes[1], (UInt8)dataBytes[2], (UInt8)dataBytes[3]];
         TestLog(@"%@", reasonString);
-        [worker removeAssetFromCache:assetItem];
+        [worker removeAssetFromCache:assetItem removeFile:YES];
         [self resumeDownloadForClass:clss];
         [assetItem sendFailureOnMainThreadToHandlers:[NSError errorWithDomain:reasonString code:0 userInfo:nil]];
         return;
@@ -752,6 +879,7 @@
 #endif
         if (![postprocessedData isKindOfClass:NSNull.class] && ![postprocessedData isKindOfClass:CoreAssetItemErrorImage.class]) {
             [_dataCache setObject:postprocessedData forKey:[assetItem cacheIdentifier]];
+            [_dataCacheAges setObject:[NSDate date] forKey:[assetItem cacheIdentifier]];
         }
 #if USE_CACHE > 1
     }
@@ -777,8 +905,36 @@
 
 - (void)failedDownloadingAsset:(NSDictionary *)assetDict {
     CoreAssetItemNormal *assetItem = [assetDict objectForKey:kCoreAssetWorkerAssetItem];
-    
     Class clss = [assetItem class];
+    
+    if (assetItem.retrieveCachedObjectOnFailure) {
+        [_cachedOperationQueue addOperationWithBlock:^{
+            CoreAssetWorkerDescriptor *worker = [_threadDescriptorsPriv objectForKey:NSStringFromClass(clss)];
+            //CFTimeInterval lstartTime = CACurrentMediaTime();
+            NSData *cachedData = nil;
+            
+            @try {
+                cachedData = [assetItem load];
+            }
+            @catch (NSException *exception) {
+                [worker removeAssetFromCache:assetItem removeFile:YES];
+            }
+            
+            id processedData;
+            if (cachedData) {
+                processedData = [assetItem postProcessData:cachedData];
+            }
+            
+            if (![processedData isKindOfClass:[NSNull class]]) {
+                [assetItem performSelectorOnMainThread:@selector(sendCompletionHandlerMessages:) withObject:processedData waitUntilDone:NO];
+            }
+            else {
+                [assetItem sendFailureOnMainThreadToHandlers:[NSError errorWithDomain:[NSString stringWithFormat:@"failedDownloadingAsset: '%@' class: '%@' (retrieveCachedObjectOnFailure)", assetItem.assetName, NSStringFromClass(clss)] code:0 userInfo:nil]];
+            }
+        }];
+        
+        return;
+    }
     
     NSString *reasonString = [NSString stringWithFormat:@"failedDownloadingAsset: '%@' class: '%@'", assetItem.assetName, NSStringFromClass(clss)];
     TestLog(@"%@", reasonString);
@@ -803,6 +959,10 @@
 
 - (void)reauthenticateWithCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler {
     completionHandler(nil);
+}
+
+- (NSString *)reachabilityHost {
+    return @"";
 }
 
 - (void)performRelogin {

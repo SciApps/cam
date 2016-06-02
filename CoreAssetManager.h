@@ -19,6 +19,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef enum : NSInteger {
+    CAMNotReachable = 0,
+    CAMReachableViaWiFi,
+    CAMReachableViaWWAN
+} CoreAssetManagerNetworkStatus;
+
 typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 
@@ -40,10 +46,12 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 @property (nonatomic, strong) OKOMutableWeakArray   *delegates;
 #ifdef USE_CACHE
 @property (nonatomic, strong) NSCache               *dataCache;
+@property (nonatomic, strong) NSMutableDictionary<NSString *, NSDate *>   *dataCacheAges;
 #endif
 @property (nonatomic, strong) NSCondition           *loginCondition;
 @property (nonatomic, strong) NSNumber              *loginCount;
 @property (nonatomic, strong) NSNumber              *loginSuccessful;
+@property (atomic) CoreAssetManagerNetworkStatus    networkStatus;
 
 - (void)registerThreadForClass:(Class)clss;
 
@@ -78,6 +86,7 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 - (void)failedDownloadingAsset:(NSDictionary *)assetDict;
 - (BOOL)determineLoginFailure:(id)postprocessedData; // warning: this method is being called from one of the worker threads
 - (void)reauthenticateWithCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
+- (NSString *)reachabilityHost;
 
 @end
 

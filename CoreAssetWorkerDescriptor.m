@@ -210,7 +210,7 @@
     return NO;
 }
 
-- (void)removeAssetFromCache:(CoreAssetItemNormal *)assetItem {
+- (void)removeAssetFromCache:(CoreAssetItemNormal *)assetItem removeFile:(BOOL)removeFile {
     if ([_cachedDict objectForKey:assetItem.assetName]) {
         [_cachedDict removeObjectForKey:assetItem.assetName];
     }
@@ -218,7 +218,9 @@
         TestLog(@"removeAssetFromCache: not in cache");
     }
     
-    [assetItem removeStoredFile];
+    if (removeFile) {
+        [assetItem removeStoredFile];
+    }
 }
 
 #pragma mark - CoreAssetWorkerDelegate methods

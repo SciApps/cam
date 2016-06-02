@@ -29,7 +29,7 @@
 - (void)resume;
 - (BOOL)isBusy;
 
-- (void)removeAssetFromCache:(CoreAssetItemNormal *)assetItem;
+- (void)removeAssetFromCache:(CoreAssetItemNormal *)assetItem removeFile:(BOOL)removeFile;
 
 /// call this when new prior dict avaible to make a new sorted internal list with prior level
 - (void)invalidatePriorList;
