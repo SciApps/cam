@@ -130,7 +130,7 @@ Pod::Spec.new do |s|
 
   # s.requires_arc = true
 
-  s.xcconfig = { "LIBRARY_SEARCH_PATHS": "$(PODS_ROOT)/curl/lib", "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libz" }
+  s.xcconfig = { "LIBRARY_SEARCH_PATHS" => "$(PODS_ROOT)/curl/lib", "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libz" }
   # s.dependency "JSONKit", "~> 1.4"
 
 end
