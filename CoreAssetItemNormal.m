@@ -57,8 +57,8 @@
     if ([self.assetName isKindOfClass:NSString.class]) {
         return [NSStringFromClass(self.class) stringByAppendingString:self.assetName];
     }
-    else if ([self.assetName respondsToSelector:@selector(hash)]) {
-        return [NSStringFromClass(self.class) stringByAppendingFormat:@"%lu", ((NSString *)self.assetName).hash];
+    else if ([self.assetName respondsToSelector:@selector(description)]) {
+        return [NSStringFromClass(self.class) stringByAppendingString:self.description];
     }
     
     return nil;
