@@ -116,10 +116,12 @@ Pod::Spec.new do |s|
   #
 
   # s.framework  = "SomeFramework"
-  s.frameworks = "util", "CURLConnection"
+  # s.frameworks = "util", "CURLConnection"
 
   # s.library   = "iconv"
   s.libraries = "z", "curl-ios"
+
+  s.vendored_frameworks = 'util.framework'
 
 
   # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
