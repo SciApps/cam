@@ -953,7 +953,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
     [_delegates compact];
 }
 
-- (BOOL)determineLoginFailure:(id)postprocessedData {
+- (BOOL)determineLoginFailure:(id)postprocessedData assetItem:(CoreAssetItemNormal *)assetItem {
     return NO;
 }
 

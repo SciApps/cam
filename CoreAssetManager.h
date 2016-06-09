@@ -25,6 +25,8 @@ typedef enum : NSInteger {
     CAMReachableViaWWAN
 } CoreAssetManagerNetworkStatus;
 
+@class CoreAssetItemNormal;
+
 typedef void (^CoreAssetManagerCompletionBlock)(id assetData);
 typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 
@@ -84,7 +86,7 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 // methods to override
 - (void)finishedDownloadingAsset:(NSDictionary *)assetDict;
 - (void)failedDownloadingAsset:(NSDictionary *)assetDict;
-- (BOOL)determineLoginFailure:(id)postprocessedData; // warning: this method is being called from one of the worker threads
+- (BOOL)determineLoginFailure:(id)postprocessedData assetItem:(CoreAssetItemNormal *)assetItem; // warning: this method is being called from one of the worker threads
 - (void)reauthenticateWithCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 - (NSString *)reachabilityHost;
 

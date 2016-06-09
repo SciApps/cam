@@ -210,7 +210,7 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         
         CoreAssetManager *assetManager = [[assetItem.class parentCamClass] manager];
         
-        if([assetManager determineLoginFailure:postprocessedData]) {
+        if([assetManager determineLoginFailure:postprocessedData assetItem:assetItem]) {
             [assetManager.loginCondition lock];
             
             @synchronized (assetManager.loginCount) {
@@ -241,7 +241,7 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         
         CoreAssetManager *assetManager = [[curlSession.assetConnection.assetItem.class parentCamClass] manager];
         
-        if([assetManager determineLoginFailure:postprocessedData]) {
+        if([assetManager determineLoginFailure:postprocessedData assetItem:curlSession.assetConnection.assetItem]) {
             [assetManager.loginCondition lock];
             
             @synchronized (assetManager.loginCount) {
