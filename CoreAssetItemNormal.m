@@ -58,7 +58,7 @@
         return [NSStringFromClass(self.class) stringByAppendingString:self.assetName];
     }
     else if ([self.assetName respondsToSelector:@selector(description)]) {
-        return [NSStringFromClass(self.class) stringByAppendingString:self.description];
+        return [NSStringFromClass(self.class) stringByAppendingString:[self.assetName description]];
     }
     
     return nil;
