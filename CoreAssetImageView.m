@@ -7,16 +7,14 @@
 //
 
 #import "CoreAssetImageView.h"
-//#import "CommunicationManager.h"
+
+#if !TARGET_INTERFACE_BUILDER
 #import "CoreAssetManager.h"
 #import "CoreAssetItemImage.h"
+#endif
 
 #define ANIMATION_TRIGGER_TIME 0.01
 #define ANIMATION_DURATION 0.3333
-
-/*@interface CoreAssetImageView() <CommuncicationManagerDelegateProtocol>
-
-@end*/
 
 @implementation CoreAssetImageView {
     id cmBlock;
@@ -83,7 +81,6 @@
 
 - (void)dealloc {
     if (signedToCommunicationManagerEvents) {
-        //[CommunicationManager removeDelegate:self];
         signedToCommunicationManagerEvents = NO;
     }
 }
@@ -110,26 +107,11 @@
     _circleShaped = circleShaped;
 }
 
-/*- (void)setParentRecord:(NSObject<CoreAssetImageViewDisplayableDelegate> *)parentRecord {
-    BOOL validProtocolResponder = [_parentRecord respondsToSelector:@selector(assetNameForUserData:)];
-    
-    if (!signedToCommunicationManagerEvents && validProtocolResponder) {
-        [CommunicationManager registerDelegate:self];
-        signedToCommunicationManagerEvents = YES;
-    }
-    else if (signedToCommunicationManagerEvents && !validProtocolResponder) {
-        [CommunicationManager removeDelegate:self];
-        signedToCommunicationManagerEvents = NO;
-    }
-    
-    _parentRecord = parentRecord;
-    [self reloadAssetNameFromParent];
-}*/
-
 - (void)setAssetName:(NSString *)assetName {
     if (![assetName isEqualToString:_assetName] && (!_assetName || [_assetName isKindOfClass:NSString.class])) {
         self.image = _emptyImage;
         
+#if !TARGET_INTERFACE_BUILDER
         CFTimeInterval startTime = CACurrentMediaTime();
         NSUInteger assetNameLength = ((NSString *)_assetName).length;
         
@@ -160,6 +142,7 @@
                 [CATransaction commit];
             }
         }] : nil;
+#endif
         
         _assetName = assetName;
     }
@@ -170,11 +153,5 @@
         self.assetName = [_parentRecord assetNameForUserData:_userData];
     }
 }
-
-/*#pragma mark - CommuncicationManagerDelegateProtocol methods
-
-- (void)polling_didSaveTruthMoc {
-    [self reloadAssetNameFromParent];
-}*/
 
 @end

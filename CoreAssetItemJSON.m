@@ -38,7 +38,7 @@
     return jsonData;
 }
 
-- (nullable NSData *)serializeRequestJSONWithInput:(id)input {
++ (nullable NSData *)serializeRequestJSONWithInput:(id)input {
     NSError *error;
     id jsonData = [NSJSONSerialization dataWithJSONObject:input options:0 error:&error];
     

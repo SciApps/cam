@@ -53,11 +53,57 @@
     return [[CoreAssetItemNormal assetStorageDirectory] stringByAppendingPathComponent:_assetName];
 }
 
+#define FMT_CHECKFORDOT(str) (identifier.length ? [identifier appendFormat:@".%@", (str)]: [identifier appendString:(str)])
+
++ (void)recursive_generateCollectionIdentifier:(id)collection identifier:(NSMutableString *)identifier {
+    if ([collection isKindOfClass:NSArray.class]) {
+        for (id child in collection) {
+            if ([child isKindOfClass:NSString.class]) {
+                FMT_CHECKFORDOT(child);
+            }
+            else if ([child isKindOfClass:NSNumber.class]) {
+                FMT_CHECKFORDOT(((NSNumber *)child).stringValue);
+            }
+            else if ([child isKindOfClass:NSArray.class] || [child isKindOfClass:NSDictionary.class]) {
+                [self recursive_generateCollectionIdentifier:child identifier:identifier];
+            }
+        }
+    }
+    else if ([collection isKindOfClass:NSDictionary.class]) {
+        [((NSDictionary *)collection) enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+            if ([key isKindOfClass:NSString.class]) {
+                FMT_CHECKFORDOT(key);
+            }
+            else if ([key isKindOfClass:NSNumber.class]) {
+                FMT_CHECKFORDOT(((NSNumber *)key).stringValue);
+            }
+            
+            if ([obj isKindOfClass:NSString.class]) {
+                [identifier appendFormat:@".%@", obj];
+            }
+            else if ([obj isKindOfClass:NSNumber.class]) {
+                [identifier appendFormat:@".%@", ((NSNumber *)obj).stringValue];
+            }
+            else if ([obj isKindOfClass:NSArray.class] || [obj isKindOfClass:NSDictionary.class]) {
+                [self recursive_generateCollectionIdentifier:obj identifier:identifier];
+            }
+        }];
+    }
+    else if ([collection isKindOfClass:NSString.class]) {
+        FMT_CHECKFORDOT(collection);
+    }
+    else if ([collection isKindOfClass:NSNumber.class]) {
+        FMT_CHECKFORDOT(((NSNumber *)collection).stringValue);
+    }
+}
+
 - (NSString *)cacheIdentifier {
     if ([self.assetName isKindOfClass:NSString.class]) {
         return [NSStringFromClass(self.class) stringByAppendingString:self.assetName];
     }
     else if ([self.assetName respondsToSelector:@selector(description)]) {
+        NSMutableString *identifier = [NSMutableString new];
+        [CoreAssetItemNormal recursive_generateCollectionIdentifier:self.assetName identifier:identifier];
         return [NSStringFromClass(self.class) stringByAppendingString:[self.assetName description]];
     }
     

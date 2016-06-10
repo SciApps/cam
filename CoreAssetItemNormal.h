@@ -12,13 +12,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface CoreAssetItemNormal : NSObject
+@interface CoreAssetItemNormal<KeyType, ObjectType> : NSObject
 
 @property (nonatomic, strong) OKOMutableWeakArray* assetCompletionHandlers;
 @property (nonatomic, strong) OKOMutableWeakArray* assetFailureHandlers;
 @property (nonatomic, assign) NSUInteger priorLevel;
 @property (nonatomic, assign) NSUInteger retryCount;
-@property (nonatomic, strong) id assetName;
+@property (nonatomic, strong) KeyType assetName;
 @property (nonatomic, readonly) BOOL shouldCache;
 @property (nonatomic, readonly) BOOL shouldCacheOnDisk;
 @property (nonatomic, readonly) BOOL retrieveCachedObjectOnFailure;
@@ -45,13 +45,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (id)addFailureHandler:(CoreAssetManagerFailureBlock)completionHandler;
 - (void)sendFailureHandlerMessages:(NSError *)reason;
 
-- (_Nullable id)postProcessData:(NSData *)assetData;
+- (_Nullable ObjectType)postProcessData:(NSData *)assetData;
 
-- (void)sendPostProcessedDataToHandlers:(id)postprocessedData;
+- (void)sendPostProcessedDataToHandlers:(ObjectType)postprocessedData;
 - (void)sendFailureOnMainThreadToHandlers:(NSError *)reason;
 
-+ (_Nullable id)fetchAssetWithName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
-+ (_Nullable id)fetchAssetWithName:(id)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
++ (_Nullable id)fetchAssetWithName:(KeyType)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
++ (_Nullable id)fetchAssetWithName:(KeyType)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 
 @end
 

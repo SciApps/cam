@@ -20,7 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (_Nullable id)postProcessData:(NSData *)assetData;
 
 - (nullable NSData *)serializeRequestJSON;
-- (nullable NSData *)serializeRequestJSONWithInput:(id)input;
++ (nullable NSData *)serializeRequestJSONWithInput:(id)input;
 
 @end
 

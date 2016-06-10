@@ -17,13 +17,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 typedef void (^CoreAssetItemImageCompletionBlock)(UIImage *assetData);
 
-@interface CoreAssetItemImage : CoreAssetItemNormal
+@interface CoreAssetItemImage : CoreAssetItemNormal<NSString *, UIImage *>
 
 - (NSString *)fileSystemPath;
 
 - (NSURLRequest *)createURLRequest;
 
-- (id)postProcessData:(NSData *)assetData;
+- (UIImage *)postProcessData:(NSData *)assetData;
 
 + (_Nullable id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetItemImageCompletionBlock)completionHandler;
 + (_Nullable id)fetchAssetWithName:(NSString *)assetName withCompletionHandler:(CoreAssetItemImageCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
