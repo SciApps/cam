@@ -53,6 +53,9 @@ NS_ASSUME_NONNULL_BEGIN
 + (_Nullable id)fetchAssetWithName:(KeyType)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler;
 + (_Nullable id)fetchAssetWithName:(KeyType)assetName withCompletionHandler:(CoreAssetManagerCompletionBlock)completionHandler withFailureHandler:(CoreAssetManagerFailureBlock)failureHandler;
 
++ (void)recursive_generateCollectionIdentifier:(id)collection identifier:(NSMutableString *)identifier;
++ (NSString *)safelyGeneratedCollectionPath:(id)collection;
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -97,6 +97,17 @@
     }
 }
 
++ (NSString *)safelyGeneratedCollectionPath:(id)collection {
+    NSMutableString *identifier = [NSMutableString new];
+    [CoreAssetItemNormal recursive_generateCollectionIdentifier:collection identifier:identifier];
+    
+    NSData *identifierData = [identifier dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *base64Identifier = [identifierData base64EncodedStringWithOptions:0];
+    
+    NSCharacterSet* illegalFileNameCharacters = [NSCharacterSet characterSetWithCharactersInString:@"/"];
+    return [base64Identifier stringByReplacingOccurrencesOfString:@"/" withString:@"-"];
+}
+
 - (NSString *)cacheIdentifier {
     if ([self.assetName isKindOfClass:NSString.class]) {
         return [NSStringFromClass(self.class) stringByAppendingString:self.assetName];

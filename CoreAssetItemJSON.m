@@ -15,8 +15,9 @@
 }
 
 - (NSString *)fileSystemPath {
-    NSString *fsPath = [[CoreAssetItemNormal assetStorageDirectory] stringByAppendingPathComponent:[NSString stringWithFormat:@"json/%@", super.assetName]];
-    return [fsPath stringByAppendingString:@""];
+    NSString *generatedPath = [CoreAssetItemNormal safelyGeneratedCollectionPath:super.assetName];
+    NSString *fsPath = [[CoreAssetItemNormal assetStorageDirectory] stringByAppendingPathComponent:[NSString stringWithFormat:@"json/%@.%@.json", NSStringFromClass(self.class), generatedPath]];
+    return fsPath;
 }
 
 - (NSURLRequest *)createURLRequest {
