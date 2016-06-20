@@ -14,7 +14,6 @@
 #define kCoreAssetManagerFetchWithBlockRetryCount 3
 #define kCoreAssetManagerDefaultRetryCount 1
 
-#define USE_CURL 1 // 0 - use objective-c http api, 1 - use curl
 #define USE_CACHE 2 // 0 - dont use cache, 1 - cache evrything, 2 - cache controlled by asset item (shouldCache)
 
 NS_ASSUME_NONNULL_BEGIN

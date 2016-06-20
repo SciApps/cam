@@ -45,17 +45,14 @@ NSString *kCoreAssetWorkerAssetItem = @"assetItem";
 NSString *kCoreAssetWorkerAssetData = @"assetData";
 NSString *kCoreAssetWorkerAssetPostprocessedData = @"assetPostprocessedData";
 
-@interface CoreAssetWorker() <NSURLConnectionDelegate, NSURLSessionDataDelegate>
+@interface CoreAssetWorker()
 
 @property (nonatomic, strong) NSThread *thread;
 @property (nonatomic, strong) NSRunLoop *runLoop;
 @property (nonatomic, strong) NSConditionLock *threadLock;
-@property (nonatomic, strong) NSURLSession *session;
 @property (nonatomic) CURL *curl;
 @property (nonatomic, strong) NSMutableArray *curlDownloadList;
 @property (nonatomic, strong) NSNumber *curlDownloadCount;
-@property (nonatomic) CFMutableDictionaryRef connections;
-@property (nonatomic) CFMutableDictionaryRef tasks;
 
 @end
 
@@ -137,12 +134,6 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     if (self) {
         _terminate = NO;
         _terminateSpin = NO;
-        _useSession = 0;//[[[UIDevice currentDevice] systemVersion] compare:@"7.0" options:NSNumericSearch] != NSOrderedAscending; // huge memory leak with 8.1.2
-#ifdef USE_CURL
-        _useCURL = 1;
-#else
-        _useCURL = 0;
-#endif
         
         _timeAll = 0;
         _timeCurrentStart = 0;
@@ -154,9 +145,6 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         _curl = NULL;
         _curlDownloadCount = @(0);
         
-        _connections = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-        _tasks = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-        
         _threadLock = [[NSConditionLock alloc] initWithCondition:CoreAssetWorker_Initializing];
         _thread = [[NSThread alloc] initWithTarget:self selector:@selector(workerMain) object:nil];
         [_thread start];
@@ -164,13 +152,6 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     }
     
     return self;
-}
-
-- (void)dealloc {
-    @synchronized(self) {
-        CFRelease(_connections);
-        CFRelease(_tasks);
-    }
 }
 
 - (void)workerMain {
@@ -185,16 +166,6 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         while (!_terminateSpin && [_runLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]]) {
             _spinCount++;
         }
-    }
-}
-
-- (void)createSession {
-    if (!_session) {
-        NSURLSessionConfiguration *sessionConfig = [NSURLSessionConfiguration ephemeralSessionConfiguration];
-        //sessionConfig.URLCache = nil;
-        //sessionConfig.timeoutIntervalForRequest = ASSETS_REQUEST_TIMEOUT;
-        sessionConfig.requestCachePolicy = NSURLRequestReloadIgnoringLocalCacheData;
-        _session = [NSURLSession sessionWithConfiguration:sessionConfig delegate:self delegateQueue:nil];
     }
 }
 
@@ -319,34 +290,6 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
 
 - (void)t_stop {
     @synchronized(self) {
-        // stop urlconnections
-        CFIndex size = CFDictionaryGetCount(_connections);
-        CFTypeRef *keysTypeRef = (CFTypeRef *)alloca(size * sizeof(CFTypeRef));
-        CFDictionaryGetKeysAndValues(_connections, (const void **)keysTypeRef, NULL);
-        const void **keys = (const void **)keysTypeRef;
-        
-        for (CFIndex i = 0; i < size; i++) {
-            NSURLConnection *connection = (__bridge NSURLConnection *)(keys[i]);
-            [connection cancel];
-            //CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(connections, keys[i]);
-            CFDictionaryRemoveValue(_connections, keys[i]);
-        }
-        
-        // stop tasks
-        CFIndex sizeTasks = CFDictionaryGetCount(_tasks);
-        CFTypeRef *keysTypeRefTasks = (CFTypeRef *)alloca(sizeTasks * sizeof(CFTypeRef));
-        CFDictionaryGetKeysAndValues(_tasks, (const void **)keysTypeRefTasks, NULL);
-        const void **keysTasks = (const void **)keysTypeRefTasks;
-        
-        for (CFIndex i = 0; i < sizeTasks; i++) {
-            NSURLSessionTask *task = (__bridge NSURLSessionTask *)(keysTasks[i]);
-            [task cancel];
-            CFDictionaryRemoveValue(_tasks, keysTasks[i]);
-        }
-        
-        [_session invalidateAndCancel];
-        _session = nil;
-        
         [_curlDownloadList removeAllObjects];
     }
 }
@@ -356,43 +299,13 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     [self performSelector:@selector(t_stop) onThread:_thread withObject:nil waitUntilDone:YES];
 }
 
-- (void)t_resume {
-    @synchronized(self) {
-        // resume urlconnections
-        CFIndex size = CFDictionaryGetCount(_connections);
-        CFTypeRef *keysTypeRef = (CFTypeRef *)alloca(size * sizeof(CFTypeRef));
-        CFDictionaryGetKeysAndValues(_connections, (const void **)keysTypeRef, NULL);
-        const void **keys = (const void **)keysTypeRef;
-        
-        for (CFIndex i = 0; i < size; i++) {
-            NSURLConnection *connection = (__bridge NSURLConnection *)(keys[i]);
-            [connection start];
-        }
-        
-        // resume tasks
-        CFIndex sizeTasks = CFDictionaryGetCount(_tasks);
-        CFTypeRef *keysTypeRefTasks = (CFTypeRef *)alloca(sizeTasks * sizeof(CFTypeRef));
-        CFDictionaryGetKeysAndValues(_tasks, (const void **)keysTypeRefTasks, NULL);
-        const void **keysTasks = (const void **)keysTypeRefTasks;
-        
-        for (CFIndex i = 0; i < sizeTasks; i++) {
-            NSURLSessionTask *task = (__bridge NSURLSessionTask *)(keysTasks[i]);
-            [task resume];
-        }
-    }
-}
-
 - (void)resume {
-    [self performSelector:@selector(t_resume) onThread:_thread withObject:nil waitUntilDone:NO];
+    //[self performSelector:@selector(t_resume) onThread:_thread withObject:nil waitUntilDone:NO];
 }
 
 - (BOOL)isBusy {
     @synchronized(self) {
-        if (_useCURL) {
-            return _curlDownloadCount.integerValue > 0;
-        }
-        
-        return CFDictionaryGetCount(_useSession ? _tasks : _connections) != 0;
+        return _curlDownloadCount.integerValue > 0;
     }
 }
 
@@ -580,7 +493,7 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         CoreAssetURLConnection *assetConnection = [CoreAssetURLConnection new];
         assetConnection.assetItem = asset;
         
-        if (_useCURL && _curlDownloadCount.integerValue > 0) {
+        if (_curlDownloadCount.integerValue > 0) {
             [_curlDownloadList addObject:assetConnection];
             return;
         }
@@ -591,27 +504,13 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         _sizeCurrent = 0;
         _bandwith = 0;
         
-        if (_useCURL) {
-            [self initCURL];
-            [self curlStartDownload:assetConnection request:request];
-        }
-        else if (_useSession) {
-            [self createSession];
-            NSURLSessionDataTask *task = [_session dataTaskWithRequest:request];
-            CFDictionaryAddValue(_tasks, (__bridge const void *)(task), (__bridge const void *)(assetConnection));
-            [task resume];
-        }
-        else {
-            NSURLConnection *connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
-            CFDictionaryAddValue(_connections, (__bridge const void *)(connection), (__bridge const void *)(assetConnection));
-            [connection scheduleInRunLoop:_runLoop forMode:NSDefaultRunLoopMode];
-            [connection start];
-        }
+        [self initCURL];
+        [self curlStartDownload:assetConnection request:request];
     }
 }
 
 - (void)t_downloadAsset:(CoreAssetItemNormal *)asset {
-    CFIndex count = _useCURL ? _curlDownloadCount.integerValue : CFDictionaryGetCount(_useSession ? _tasks : _connections);
+    CFIndex count = _curlDownloadCount.integerValue;
     
     if (count) {
         TestLog(@"t_downloadAsset count = %li", count);
@@ -626,242 +525,6 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     
     if (asset) {
         [self performSelector:@selector(t_downloadAsset:) onThread:_thread withObject:asset waitUntilDone:NO];
-    }
-}
-
-- (void)clearConnection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-    CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_connections, (__bridge const void *)(connection));
-    
-    if (error) {
-        TestLog(@"failed downloading asset: '%@' class: '%@' error: '%@'", assetConnection.assetItem.assetName, NSStringFromClass([assetConnection.assetItem class]), error.localizedDescription);
-    }
-    
-    [connection cancel];
-    
-    CFDictionaryRemoveValue(_connections, (__bridge const void *)(connection));
-}
-
-- (void)clearTask:(NSURLSessionTask *)dataTask didFailWithError:(NSError *)error {
-    CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_tasks, (__bridge const void *)(dataTask));
-    
-    if (error) {
-        TestLog(@"failed downloading asset: '%@' class: '%@' error: '%@'", assetConnection.assetItem.assetName, NSStringFromClass([assetConnection.assetItem class]), error.localizedDescription);
-    }
-    
-    CFDictionaryRemoveValue(_tasks, (__bridge const void *)(dataTask));
-    
-    [_session.configuration.URLCache removeAllCachedResponses];
-    //[[NSURLCache sharedURLCache] setDiskCapacity:0];
-    //[[NSURLCache sharedURLCache] setMemoryCapacity:0];
-}
-
-- (void)t_finishTask:(NSURLSessionTask *)task {
-    @synchronized(self) {
-        CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_tasks, (__bridge const void *)(task));
-        
-        if (_terminate) {
-            [self clearTask:task didFailWithError:nil];
-            return;
-        }
-        
-        if (!assetConnection.connectionData) {
-            assetConnection.connectionData = [NSMutableData new];
-        }
-        
-        NSError* error = nil;
-        
-        if ([assetConnection validLength]) {
-            if (assetConnection.assetItem.shouldCacheOnDisk) {
-                @try {
-                    [assetConnection.assetItem store:assetConnection.connectionData];
-                }
-                @catch (NSException *exception) {
-                    error = [NSError errorWithDomain:exception.name code:0 userInfo:exception.userInfo];
-                    
-                    if (!assetConnection.assetItem.retryCount) {
-                        [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
-                    }
-                    
-                    [self clearTask:task didFailWithError:error];
-                    return;
-                }
-            }
-            
-            // storing the file takes lot of time, so check for termination request again
-            if (_terminate) {
-                [assetConnection.assetItem removeStoredFile];
-                [self clearTask:task didFailWithError:nil];
-                return;
-            }
-            
-            [self sendDelegateFinishedDownloadingAsset:assetConnection.assetItem connectionData:assetConnection.connectionData];
-        }
-        else {
-            error = [NSError errorWithDomain:@"![assetConnection validLength]" code:0 userInfo:nil];
-            
-            if (!assetConnection.assetItem.retryCount) {
-                [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
-            }
-            
-            if (assetConnection.assetItem.retryCount) {
-                assetConnection.assetItem.retryCount--;
-                [_runLoop performSelector:@selector(rl_downloadAsset:) target:self argument:assetConnection.assetItem order:0 modes:@[NSRunLoopCommonModes]];
-            }
-        }
-        
-        [self clearTask:task didFailWithError:error];
-    }
-}
-
-- (void)t_appendTaskData:(NSArray *)params {
-    NSURLSessionDataTask *dataTask = params.firstObject;
-    NSData *data = params.lastObject;
-    
-    @synchronized(self) {
-        CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_tasks, (__bridge const void *)(dataTask));
-        [assetConnection appendData:data];
-        _sizeCurrent += data.length;
-        _timeCurrent = CACurrentMediaTime() - _timeCurrentStart;
-        _bandwith = (CGFloat)_sizeCurrent / (CGFloat)_timeCurrent;
-    }
-}
-
-#pragma mark - NSURLSessionDataDelegate
-
-- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask willCacheResponse:(NSCachedURLResponse *)proposedResponse completionHandler:(void (^)(NSCachedURLResponse *))completionHandler {
-    completionHandler(nil);
-}
-
-- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))completionHandler {
-    @synchronized(self) {
-        CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_tasks, (__bridge const void *)(dataTask));
-        
-        if (response.expectedContentLength != NSURLResponseUnknownLength) {
-            assetConnection.connectionDataExpectedLength = response.expectedContentLength;
-        }
-        
-        completionHandler(NSURLSessionResponseAllow);
-    }
-}
-
-- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data {
-    /*@synchronized(self) {
-     CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(tasks, (__bridge const void *)(dataTask));
-     [assetConnection appendData:data];
-     sizeCurrent += data.length;
-     timeCurrent = CACurrentMediaTime() - timeCurrentStart;
-     bandwith = (CGFloat)sizeCurrent / (CGFloat)timeCurrent;
-     }*/
-    
-    [self performSelector:@selector(t_appendTaskData:) onThread:_thread withObject:@[dataTask, data] waitUntilDone:YES];
-}
-
-#pragma mark - NSURLSessionTaskDelegate
-
-- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
-    @synchronized(self) {
-        _sizeAll += _sizeCurrent;
-        _timeAll += _timeCurrent;
-    }
-    
-    [self performSelector:@selector(t_finishTask:) onThread:_thread withObject:task waitUntilDone:YES];
-}
-
-#pragma mark - NSURLConnectionDelegate methods
-
-- (NSCachedURLResponse *)connection:(NSURLConnection *)connection willCacheResponse:(NSCachedURLResponse *)cachedResponse {
-    return nil;
-}
-
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
-    @synchronized(self) {
-        CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_connections, (__bridge const void *)(connection));
-        
-        if (response.expectedContentLength != NSURLResponseUnknownLength) {
-            assetConnection.connectionDataExpectedLength = response.expectedContentLength;
-        }
-    }
-}
-
-- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data {
-    @synchronized(self) {
-        CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_connections, (__bridge const void *)(connection));
-        [assetConnection appendData:data];
-        _sizeCurrent += data.length;
-        _timeCurrent = CACurrentMediaTime() - _timeCurrentStart;
-        _bandwith = (CGFloat)_sizeCurrent / (CGFloat)_timeCurrent;
-    }
-}
-
-- (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-    @synchronized(self) {
-        _sizeAll += _sizeCurrent;
-        _timeAll += _timeCurrent;
-        
-        if (_terminate) {
-            [self clearConnection:connection didFailWithError:nil];
-            return;
-        }
-        
-        CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_connections, (__bridge const void *)(connection));
-        
-        NSError* error = nil;
-        
-        if (!assetConnection.connectionData) {
-            assetConnection.connectionData = [NSMutableData new];
-        }
-        
-        if ([assetConnection validLength]) {
-            if (assetConnection.assetItem.shouldCacheOnDisk) {
-                @try {
-                    [assetConnection.assetItem store:assetConnection.connectionData];
-                }
-                @catch (NSException *exception) {
-                    error = [NSError errorWithDomain:exception.name code:0 userInfo:exception.userInfo];
-                    [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
-                    [self clearConnection:connection didFailWithError:error];
-                    return;
-                }
-            }
-            
-            // storing the file takes lot of time, so check for termination request again
-            if (_terminate) {
-                [assetConnection.assetItem removeStoredFile];
-                [self clearConnection:connection didFailWithError:error];
-                return;
-            }
-            
-            [self sendDelegateFinishedDownloadingAsset:assetConnection.assetItem connectionData:assetConnection.connectionData];
-        }
-        else {
-            error = [NSError errorWithDomain:@"![assetConnection validLength]" code:0 userInfo:nil];
-            [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
-        }
-        
-        [self clearConnection:connection didFailWithError:error];
-    }
-}
-
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-    @synchronized(self) {
-        
-        if (_terminate) {
-            [self clearConnection:connection didFailWithError:error];
-            return;
-        }
-        
-        CoreAssetURLConnection *assetConnection = CFDictionaryGetValue(_connections, (__bridge const void *)(connection));
-        
-        if (!assetConnection.assetItem.retryCount) {
-            [self sendDelegateFailedDownloadingAsset:assetConnection.assetItem];
-        }
-        
-        [self clearConnection:connection didFailWithError:error];
-        
-        if (assetConnection.assetItem.retryCount) {
-            assetConnection.assetItem.retryCount--;
-            [_runLoop performSelector:@selector(rl_downloadAsset:) target:self argument:assetConnection.assetItem order:0 modes:@[NSRunLoopCommonModes]];
-        }
     }
 }
 

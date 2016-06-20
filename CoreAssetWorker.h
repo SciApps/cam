@@ -27,8 +27,6 @@ extern NSString *kCoreAssetWorkerAssetPostprocessedData;
 @property (atomic, assign) NSUInteger spinCount;
 @property (atomic, assign) BOOL terminateSpin;
 @property (atomic, assign) BOOL terminate;
-@property (atomic, assign) BOOL useSession;
-@property (atomic, assign) BOOL useCURL;
 @property (atomic, assign) CFTimeInterval timeAll;
 @property (atomic, assign) CFTimeInterval timeCurrentStart;
 @property (atomic, assign) CFTimeInterval timeCurrent;
