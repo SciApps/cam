@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-@import util;
+@import NUUtil;
 
 #define kCoreAssetManagerFetchWithBlockPriorLevel 9999
 #define kCoreAssetManagerFetchWithBlockRetryCount 3

@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "CoreAssetManager.h"
-@import util;
+@import NUUtil;
 
 NS_ASSUME_NONNULL_BEGIN
 
