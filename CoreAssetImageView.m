@@ -108,7 +108,7 @@
 }
 
 - (void)setAssetName:(NSString *)assetName {
-    if (![assetName isEqualToString:_assetName] && (!_assetName || [_assetName isKindOfClass:NSString.class])) {
+    if (![assetName isEqual:_assetName] && (!_assetName || [_assetName isKindOfClass:NSString.class])) {
         self.image = _emptyImage;
         
 #if !TARGET_INTERFACE_BUILDER
@@ -146,6 +146,12 @@
         
         _assetName = assetName;
     }
+}
+
+- (void)resetToEmptyImage {
+    self.image = _emptyImage;
+    cmBlock = nil;
+    _assetName = nil;
 }
 
 - (void)reloadAssetNameFromParent {
