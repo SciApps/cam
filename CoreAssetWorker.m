@@ -303,7 +303,6 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
         // Some settings I recommend you always set:
         curl_easy_setopt(_curl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);	// support basic, digest, and NTLM authentication
         curl_easy_setopt(_curl, CURLOPT_NOSIGNAL, 1L);	// try not to use signals
-        curl_easy_setopt(_curl, CURLOPT_USERAGENT, "FinTech-CoreAssetWorker");	// set a default user agent
         
         // Things specific to this app:
         //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);	// turn on verbose logging; your app doesn't need to do this except when debugging a connection
@@ -423,6 +422,11 @@ size_t CoreAssetWorkerCurlWriteCallback(char *ptr, size_t size, size_t nmemb, vo
     int attempts = 1;
     CURLcode theResult = CURL_LAST;
     CoreAssetManager *assetManager = [[curlSession.assetConnection.assetItem.class parentCamClass] manager];
+    
+    NSString *userAgent = [assetManager.class userAgent];
+    curl_easy_setopt(_curl, CURLOPT_USERAGENT, userAgent.UTF8String);	// set a default user agent
+    BOOL allowRedirect = [curlSession.assetConnection.assetItem.class allowRedirect];
+    curl_easy_setopt(_curl, CURLOPT_FOLLOWLOCATION, allowRedirect);
     
     while(assetManager.networkStatus != CAMNotReachable && (theResult = curl_easy_perform(_curl)) != CURLE_OK && curlSession.assetConnection.assetItem.retryCount) {
         curlSession.assetConnection.assetItem.retryCount--;

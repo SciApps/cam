@@ -54,6 +54,10 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
     return instance;
 }*/
 
++ (NSString *)userAgent {
+    return @"CoreAssetManager";
+}
+
 - (NSDictionary *)threadDescriptors {
     return _threadDescriptorsPriv.copy;
 }
@@ -160,7 +164,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
     TestLog(@"CoreAssetManager.Reachability: %@", [networkStatusLabels objectAtIndex:self.networkStatus]);
 }
 
-+ (NSArray *)listFilesInCacheDirectoryWithExtension:(NSString *)extension withSubpath:(NSString *)subpath {
++ (NSArray<NSString *> *)listFilesInCacheDirectoryWithExtension:(NSString *)extension withSubpath:(NSString *)subpath {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *assetPath = [CoreAssetItemNormal assetStorageDirectory];
     

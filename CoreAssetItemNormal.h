@@ -26,6 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (NSUInteger)workerThreads;
 + (Class)parentCamClass;
++ (BOOL)allowRedirect;
 
 + (NSString *)assetStorageDirectory;
 - (NSString *)fileSystemPath;

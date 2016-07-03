@@ -26,4 +26,6 @@ IB_DESIGNABLE
 @property (nonatomic) IBInspectable BOOL circleShaped;
 @property (nonatomic, strong) id assetName;
 
+- (void)resetToEmptyImage;
+
 @end

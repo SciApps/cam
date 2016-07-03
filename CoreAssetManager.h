@@ -37,7 +37,7 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 
 @end
 
-@interface CoreAssetManager : Manager {
+@interface CoreAssetManager : NUManager {
 @private
     NSMutableArray        *_classList;
 }
@@ -54,6 +54,8 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 @property (nonatomic, strong) NSNumber              *loginCount;
 @property (nonatomic, strong) NSNumber              *loginSuccessful;
 @property (atomic) CoreAssetManagerNetworkStatus    networkStatus;
+
++ (NSString *)userAgent;
 
 - (void)registerThreadForClass:(Class)clss;
 
@@ -81,7 +83,7 @@ typedef void (^CoreAssetManagerFailureBlock)(NSError *reason);
 
 + (_Nullable id)fetchImageWithName:(NSString *)assetName withCompletionHandler:(void (^)(UIImage *image))completionHandler;
 
-+ (NSArray *)listFilesInCacheDirectoryWithExtension:(NSString *)extension withSubpath:(NSString *)subpath;
++ (NSArray<NSString *> *)listFilesInCacheDirectoryWithExtension:(NSString *)extension withSubpath:(NSString *)subpath;
 
 // methods to override
 - (void)finishedDownloadingAsset:(NSDictionary *)assetDict;

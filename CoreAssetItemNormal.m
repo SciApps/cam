@@ -43,6 +43,10 @@
     return CoreAssetManager.class;
 }
 
++ (BOOL)allowRedirect {
+    return NO;
+}
+
 + (NSString *)assetStorageDirectory {
     NSString *directoryPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
     directoryPath = [directoryPath stringByAppendingString:@"/assets/"];
