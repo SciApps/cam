@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "cam"
-  s.version      = “0.3.7”
+  s.version      = "0.3.7"
   s.summary      = "Lighting-fast, multithreaded, extensible resource manager"
 
   # This description is used to generate tags and improve search results.
@@ -78,7 +78,7 @@ Pod::Spec.new do |s|
   #  Supports git, hg, bzr, svn and HTTP.
   #
 
-  s.source       = { :git => "https://github.com/mrnuku/cam.git", :tag => “0.3.7” }
+  s.source       = { :git => "https://github.com/mrnuku/cam.git", :tag => "0.3.7" }
 
 
   # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
