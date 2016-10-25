@@ -32,7 +32,10 @@
 
 - (void)dealloc {
     CFRelease(_cfRequest);
-    CFRelease(_cfReadStream);
+    
+    if (_cfReadStream) {
+        CFRelease(_cfReadStream);
+    }
 }
 
 - (void)initStream {
@@ -297,13 +300,15 @@ NSString *kCoreAssetWorkerAssetPostprocessedData = @"assetPostprocessedData";
             if (!response) {
                 response = (CFHTTPMessageRef)CFReadStreamCopyProperty(coreAssetWorkerSession.cfReadStream, kCFStreamPropertyHTTPResponseHeader);
                 
-                headerFields = CFBridgingRelease(CFHTTPMessageCopyAllHeaderFields(response));
-                
-                [headerFields enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, NSString * _Nonnull obj, BOOL * _Nonnull stop) {
-                    if ([key caseInsensitiveCompare:@"Content-Length"] == NSOrderedSame) {
-                        coreAssetWorkerSession.assetConnection.connectionDataExpectedLength = obj.longLongValue;
-                    }
-                }];
+                if (response) {
+                    headerFields = CFBridgingRelease(CFHTTPMessageCopyAllHeaderFields(response));
+                    
+                    [headerFields enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, NSString * _Nonnull obj, BOOL * _Nonnull stop) {
+                        if ([key caseInsensitiveCompare:@"Content-Length"] == NSOrderedSame) {
+                            coreAssetWorkerSession.assetConnection.connectionDataExpectedLength = obj.longLongValue;
+                        }
+                    }];
+                }
                 
                 /*NSData *socketData = CFBridgingRelease(CFReadStreamCopyProperty(coreAssetWorkerSession.cfReadStream, kCFStreamPropertySocketNativeHandle));
                 int* clientSocket = (int *)socketData.bytes;
@@ -326,7 +331,17 @@ NSString *kCoreAssetWorkerAssetPostprocessedData = @"assetPostprocessedData";
     
     //CFReadStreamClose(coreAssetWorkerSession.cfReadStream);
     //CFRelease(coreAssetWorkerSession.cfReadStream);
-    CFRelease(response);
+    
+    if (response) {
+        CFRelease(response);
+    }
+    
+    [headerFields enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, NSString * _Nonnull obj, BOOL * _Nonnull stop) {
+        if ([key caseInsensitiveCompare:@"Connection"] == NSOrderedSame &&
+            [obj caseInsensitiveCompare:@"close"] == NSOrderedSame) {
+            CFReadStreamClose(coreAssetWorkerSession.cfReadStream);
+        }
+    }];
     
     CoreAssetURLConnection *assetConnection = coreAssetWorkerSession.assetConnection;
     

@@ -10,7 +10,6 @@
 #import "CoreAssetWorker.h"
 #import "CoreAssetWorkerDescriptor.h"
 #import "CoreAssetItemImage.h"
-#import <NUUtil/UtilMacros.h>
 
 #import <SystemConfiguration/SystemConfiguration.h>
 #import <arpa/inet.h>

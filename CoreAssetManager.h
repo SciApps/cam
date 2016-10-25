@@ -10,6 +10,7 @@
 #import <UIKit/UIKit.h>
 #import <NUUtil/OKOMutableWeakArray.h>
 #import <NUUtil/NUManager.h>
+#import <NUUtil/UtilMacros.h>
 
 #define kCoreAssetManagerFetchWithBlockPriorLevel 9999
 #define kCoreAssetManagerFetchWithBlockRetryCount 3
