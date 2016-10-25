@@ -7,6 +7,7 @@
 //
 
 #import "CoreAssetItemJSON.h"
+#import <NUUtil/UtilMacros.h>
 
 @implementation CoreAssetItemJSON
 

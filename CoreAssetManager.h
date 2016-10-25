@@ -8,7 +8,8 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-@import NUUtil;
+#import <NUUtil/OKOMutableWeakArray.h>
+#import <NUUtil/NUManager.h>
 
 #define kCoreAssetManagerFetchWithBlockPriorLevel 9999
 #define kCoreAssetManagerFetchWithBlockRetryCount 3
@@ -23,6 +24,13 @@ typedef enum : NSInteger {
     CAMReachableViaWiFi,
     CAMReachableViaWWAN
 } CoreAssetManagerNetworkStatus;
+
+// version in format major.minor.patch
+typedef enum : NSInteger {
+    CAMVersionMajor = 0,
+    CAMVersionMinor = 4,
+    CAMVersionPatch = 0
+} CoreAssetManagerVersion;
 
 @class CoreAssetItemNormal;
 

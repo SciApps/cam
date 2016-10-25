@@ -10,7 +10,7 @@
 #import "CoreAssetWorker.h"
 #import "CoreAssetWorkerDescriptor.h"
 #import "CoreAssetItemImage.h"
-#import "UtilMacros.h"
+#import <NUUtil/UtilMacros.h>
 
 #import <SystemConfiguration/SystemConfiguration.h>
 #import <arpa/inet.h>
@@ -55,7 +55,7 @@ static void ReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReach
 }*/
 
 + (NSString *)userAgent {
-    return @"CoreAssetManager";
+    return [@"CoreAssetManager" stringByAppendingFormat:@"/%i.%i.%i", CAMVersionMajor, CAMVersionMinor, CAMVersionPatch];
 }
 
 - (NSDictionary *)threadDescriptors {

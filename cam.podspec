@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "cam"
-  s.version      = "0.3.7"
+  s.version      = "0.4.0"
   s.summary      = "Lighting-fast, multithreaded, extensible resource manager"
 
   # This description is used to generate tags and improve search results.
@@ -78,7 +78,7 @@ Pod::Spec.new do |s|
   #  Supports git, hg, bzr, svn and HTTP.
   #
 
-  s.source       = { :git => "https://github.com/mrnuku/cam.git", :tag => "0.3.7" }
+  s.source       = { :git => "https://github.com/mrnuku/cam.git", :tag => "0.4.0" }
 
 
   # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
@@ -119,7 +119,7 @@ Pod::Spec.new do |s|
   # s.frameworks = “NUUtil", "CURLConnection"
 
   # s.library   = "iconv"
-  s.libraries = "z", "curl-ios"
+  # s.libraries = "z", "curl-ios"
 
   # s.vendored_frameworks = 'NUUtil.framework'
 
@@ -132,9 +132,9 @@ Pod::Spec.new do |s|
 
   # s.requires_arc = true
 
-  s.xcconfig = { "LIBRARY_SEARCH_PATHS" => "$(PODS_ROOT)/curl/lib", "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libz" }
+  # s.xcconfig = { "LIBRARY_SEARCH_PATHS" => "$(PODS_ROOT)/curl/lib", "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libz" }
 
   s.dependency "NUUtil"
-  s.dependency "CURLConnection"
+  # s.dependency "CURLConnection"
 
 end

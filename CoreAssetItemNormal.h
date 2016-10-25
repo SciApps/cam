@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "CoreAssetManager.h"
-@import NUUtil;
+#import <NUUtil/OKOMutableWeakArray.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
